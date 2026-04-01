@@ -29,6 +29,11 @@ When working with AI coding agents (Claude Code, Cursor, Copilot, etc.), the rev
 - **Code fold/expand** -- hidden code between hunks shown as expandable sections
 - **Keyboard shortcuts** -- `j/k` navigate files, `a` mark viewed, `c` comment, `g` generate feedback
 
+## Requirements
+
+- Node.js >= 24
+- Git
+
 ## Install
 
 ```bash
