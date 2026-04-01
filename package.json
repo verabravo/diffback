@@ -20,6 +20,9 @@
     "git",
     "diff"
   ],
+  "engines": {
+    "node": ">=22"
+  },
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^25.5.0",

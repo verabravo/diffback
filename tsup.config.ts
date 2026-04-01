@@ -5,7 +5,7 @@ import { resolve } from "path";
 export default defineConfig({
   entry: ["src/cli.ts"],
   format: ["esm"],
-  target: "node18",
+  target: "node22",
   platform: "node",
   banner: {
     js: '#!/usr/bin/env node',
