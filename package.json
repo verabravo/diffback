@@ -1,0 +1,32 @@
+{
+  "name": "diffback",
+  "version": "1.0.0",
+  "description": "Review AI-generated code changes and generate structured feedback prompts",
+  "type": "module",
+  "bin": {
+    "diffback": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "ai",
+    "code-review",
+    "feedback",
+    "git",
+    "diff"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "open": "^11.0.0"
+  }
+}
