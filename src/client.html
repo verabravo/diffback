@@ -1355,7 +1355,7 @@
               });
             }
 
-            // Click line numbers: click to select, shift+click to extend range
+            // Click line numbers: click to select/deselect, shift+click to extend range
             diffContainer.querySelectorAll('.d2h-code-linenumber').forEach(el => {
               el.addEventListener('click', (ev) => {
                 const lineNum = el.querySelector('.line-num2')?.textContent?.trim()
@@ -1369,12 +1369,17 @@
                   const e = Math.max(rangeStart, num);
                   if (lineInput) lineInput.value = s === e ? String(s) : `${s}-${e}`;
                   highlightRange(s, e);
+                } else if (rangeStart === num) {
+                  // Click same line again: deselect
+                  rangeStart = null;
+                  if (lineInput) lineInput.value = '';
+                  highlightRange(null, null);
                 } else {
                   rangeStart = num;
                   if (lineInput) lineInput.value = String(num);
                   highlightRange(num, num);
+                  document.getElementById('comment-text')?.focus();
                 }
-                document.getElementById('comment-text')?.focus();
               });
             });
 
