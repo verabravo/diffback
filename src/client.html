@@ -233,11 +233,27 @@
     /* Sidebar */
     .sidebar {
       width: var(--sidebar-width);
+      min-width: 180px;
+      max-width: 600px;
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       flex-shrink: 0;
       overflow: hidden;
+      position: relative;
+    }
+    .sidebar-resize {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 4px;
+      height: 100%;
+      cursor: col-resize;
+      z-index: 20;
+    }
+    .sidebar-resize:hover,
+    .sidebar-resize.dragging {
+      background: var(--accent);
     }
     .sidebar-header {
       padding: 6px 12px;
@@ -549,17 +565,46 @@
       display: flex;
       align-items: flex-start;
       gap: 8px;
-      padding: 4px 0;
+      padding: 6px 0;
       font-size: 12px;
       color: var(--text-muted);
-      opacity: 0.7;
+      border-bottom: 1px solid var(--border);
     }
+    .archived-item:last-child { border-bottom: none; }
     .archived-item .archived-round {
       font-size: 10px;
-      background: var(--bg-tertiary);
+      background: var(--violet);
+      color: var(--bg);
+      border-radius: 3px;
+      padding: 1px 6px;
+      flex-shrink: 0;
+      font-weight: 600;
+    }
+    .archived-item .archived-text { flex: 1; }
+    /* Inline archived comment bubble (dimmed, dashed border) */
+    .inline-archived-bubble {
+      margin: 4px 8px 4px 60px;
+      padding: 5px 10px;
+      background: transparent;
+      border: 1px dashed var(--border);
+      border-left: 3px dashed var(--violet);
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      opacity: 0.7;
+    }
+    .inline-archived-bubble .archived-round {
+      font-size: 9px;
+      background: var(--violet);
+      color: var(--bg);
       border-radius: 3px;
       padding: 1px 5px;
       flex-shrink: 0;
+      font-weight: 600;
     }
     .suggestion-input {
       margin-top: 4px;
@@ -657,11 +702,13 @@
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-    /* Line click hint */
-    .d2h-code-linenumber { cursor: pointer; }
+    /* Line number click hint - only the number column is clickable */
+    .d2h-code-linenumber { cursor: pointer; user-select: none; }
     .d2h-code-linenumber:hover {
       background: rgba(38, 139, 210, 0.25) !important;
     }
+    /* Code content is freely selectable */
+    .d2h-code-line-ctn { cursor: text; user-select: text; }
 
     /* ---- diff2html Solarized Dark overrides ---- */
     .d2h-file-header, .d2h-file-wrapper {
@@ -827,8 +874,17 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: var(--yellow);
+      cursor: pointer;
+      z-index: 5;
     }
+    .comment-marker.marker-current {
+      background: var(--orange);
+    }
+    .comment-marker.marker-archived {
+      background: transparent;
+      border: 2px solid var(--violet);
+    }
+    .comment-marker:hover { opacity: 0.8; }
     /* Selected line range highlighting */
     tr.line-selected td {
       outline: 1px solid var(--accent);
@@ -900,7 +956,8 @@
   </div>
 
   <div class="main">
-    <div class="sidebar">
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-resize" id="sidebar-resize"></div>
       <div class="sidebar-header">
         <span>Files</span>
         <div class="filter-bar" id="filter-bar">
@@ -1207,21 +1264,30 @@
       return parseInt(String(comment.line).split('-')[0]);
     }
 
-    function insertInlineComments(diffContainer, comments) {
-      const lineComments = comments.filter(c => c.line !== null);
-      if (lineComments.length === 0) return;
+    function insertInlineComments(diffContainer, comments, archivedComments) {
+      // Build a map of line -> { current: [...], archived: [...] }
+      const lineData = {};
 
-      // Group comments by their end line (where the bubble appears)
-      const byEndLine = {};
-      const markerLines = new Set();
-      for (const c of lineComments) {
+      for (const c of comments.filter(c => c.line !== null)) {
         const endLine = getCommentEndLine(c);
         const startLine = getCommentStartLine(c);
         if (!endLine) continue;
-        if (!byEndLine[endLine]) byEndLine[endLine] = [];
-        byEndLine[endLine].push(c);
-        // Mark all lines in range
-        for (let l = startLine; l <= endLine; l++) markerLines.add(l);
+        if (!lineData[endLine]) lineData[endLine] = { current: [], archived: [], markerLines: new Set() };
+        lineData[endLine].current.push(c);
+        for (let l = startLine; l <= endLine; l++) lineData[endLine].markerLines.add(l);
+      }
+
+      for (const c of (archivedComments || []).filter(c => c.line !== null)) {
+        const endLine = getCommentEndLine(c);
+        if (!endLine) continue;
+        if (!lineData[endLine]) lineData[endLine] = { current: [], archived: [], markerLines: new Set() };
+        lineData[endLine].archived.push(c);
+      }
+
+      // Collect all marker lines (for range highlighting)
+      const allMarkerLines = new Set();
+      for (const data of Object.values(lineData)) {
+        for (const l of data.markerLines) allMarkerLines.add(l);
       }
 
       diffContainer.querySelectorAll('.d2h-code-linenumber').forEach(el => {
@@ -1229,22 +1295,45 @@
         const num = parseInt(lineNum2);
         if (isNaN(num)) return;
 
-        // Add marker dot to all lines in any comment range
-        if (markerLines.has(num)) {
-          el.style.position = 'relative';
+        const data = lineData[num];
+        const hasCurrent = data?.current.length > 0;
+        const hasArchived = data?.archived.length > 0;
+        const isInRange = allMarkerLines.has(num) && !data; // part of a range but not the end line
+
+        if (!hasCurrent && !hasArchived && !isInRange) return;
+
+        el.style.position = 'relative';
+
+        // Add marker dots (can have both current and archived on same line)
+        if (hasCurrent) {
           const marker = document.createElement('span');
-          marker.className = 'comment-marker';
+          marker.className = 'comment-marker marker-current';
+          marker.title = 'Toggle comments';
+          el.appendChild(marker);
+        }
+        if (hasArchived) {
+          const marker = document.createElement('span');
+          marker.className = 'comment-marker marker-archived';
+          marker.style.left = hasCurrent ? '12px' : '2px'; // offset if both
+          marker.title = 'Toggle archived comments';
+          el.appendChild(marker);
+        }
+        if (isInRange) {
+          const marker = document.createElement('span');
+          marker.className = 'comment-marker marker-current';
+          marker.style.opacity = '0.4';
           el.appendChild(marker);
         }
 
-        // Insert bubble after the end line
-        if (!byEndLine[num]) return;
+        if (!data) return;
         const tr = el.closest('tr');
         if (!tr) return;
 
-        for (const comment of byEndLine[num]) {
+        // Create current comment bubbles (visible by default)
+        const currentRows = [];
+        for (const comment of data.current) {
           const commentTr = document.createElement('tr');
-          commentTr.className = 'inline-comment-row';
+          commentTr.className = 'inline-comment-row inline-current';
           const td = document.createElement('td');
           td.colSpan = 99;
           td.innerHTML = `
@@ -1263,8 +1352,8 @@
             const review = file.review || { comments: [] };
             const newComments = (review.comments || []).filter(c => c.id !== comment.id);
             const newStatus = newComments.length > 0 ? 'has-feedback' : 'pending';
-            const diffEl = document.querySelector('.diff-container');
-            const scrollTop = diffEl ? diffEl.scrollTop : 0;
+            const diffEl2 = document.querySelector('.diff-container');
+            const scrollTop = diffEl2 ? diffEl2.scrollTop : 0;
             saveReview(file.path, newStatus, newComments).then(() => {
               loadDiff(file.path).then(() => {
                 const newDiffEl = document.querySelector('.diff-container');
@@ -1273,10 +1362,62 @@
             });
           });
           commentTr.appendChild(td);
-          tr.after(commentTr);
+          currentRows.push(commentTr);
         }
 
-        delete byEndLine[num];
+        // Create archived comment bubbles (hidden by default)
+        const archivedRows = [];
+        for (const ac of data.archived) {
+          const archTr = document.createElement('tr');
+          archTr.className = 'inline-comment-row inline-archived';
+          archTr.style.display = 'none';
+          const td = document.createElement('td');
+          td.colSpan = 99;
+          td.innerHTML = `
+            <div class="inline-archived-bubble">
+              <span class="archived-round">R${ac.round}</span>
+              <span class="inline-line-ref">L${ac.line}</span>
+              <span>${escapeHtml(ac.text)}${ac.suggestion ? `<div class="inline-suggestion">${escapeHtml(ac.suggestion)}</div>` : ''}</span>
+            </div>
+          `;
+          archTr.appendChild(td);
+          archivedRows.push(archTr);
+        }
+
+        // Insert all rows after tr
+        let insertAfter = tr;
+        for (const row of currentRows) {
+          insertAfter.after(row);
+          insertAfter = row;
+        }
+        for (const row of archivedRows) {
+          insertAfter.after(row);
+          insertAfter = row;
+        }
+
+        // Click orange marker to toggle current bubbles
+        const currentMarker = el.querySelector('.marker-current');
+        if (currentMarker && currentRows.length > 0) {
+          currentMarker.addEventListener('mousedown', (ev) => { ev.preventDefault(); ev.stopPropagation(); });
+          currentMarker.addEventListener('mouseup', (ev) => {
+            ev.stopPropagation();
+            const visible = currentRows[0].style.display !== 'none';
+            currentRows.forEach(r => r.style.display = visible ? 'none' : '');
+          });
+        }
+
+        // Click violet marker to toggle archived bubbles
+        const archivedMarker = el.querySelector('.marker-archived');
+        if (archivedMarker && archivedRows.length > 0) {
+          archivedMarker.addEventListener('mousedown', (ev) => { ev.preventDefault(); ev.stopPropagation(); });
+          archivedMarker.addEventListener('mouseup', (ev) => {
+            ev.stopPropagation();
+            const visible = archivedRows[0].style.display !== 'none';
+            archivedRows.forEach(r => r.style.display = visible ? 'none' : '');
+          });
+        }
+
+        delete lineData[num];
       });
     }
 
@@ -1338,7 +1479,7 @@
           // Post-render: folds, inline comments, line click handlers
           setTimeout(() => {
             insertFoldIndicators(diffContainer, appState.currentDiff.diff, file.path);
-            insertInlineComments(diffContainer, comments);
+            insertInlineComments(diffContainer, comments, review.archivedComments || []);
 
             // Line selection state
             let rangeStart = null;
@@ -1356,21 +1497,35 @@
             }
 
             // Click line numbers: click to select/deselect, shift+click to extend range
+            // Use mousedown+mouseup to ignore drags
             diffContainer.querySelectorAll('.d2h-code-linenumber').forEach(el => {
-              el.addEventListener('click', (ev) => {
+              let mouseDownPos = null;
+              el.addEventListener('mousedown', (ev) => {
+                mouseDownPos = { x: ev.clientX, y: ev.clientY };
+                ev.preventDefault(); // Prevent text selection starting from line numbers
+              });
+              el.addEventListener('mouseup', (ev) => {
+                // Ignore if dragged more than 5px (user was selecting text)
+                if (!mouseDownPos) return;
+                const dx = Math.abs(ev.clientX - mouseDownPos.x);
+                const dy = Math.abs(ev.clientY - mouseDownPos.y);
+                mouseDownPos = null;
+                if (dx > 5 || dy > 5) return;
+
                 const lineNum = el.querySelector('.line-num2')?.textContent?.trim()
                   || el.querySelector('.line-num1')?.textContent?.trim();
                 const num = parseInt(lineNum);
                 if (isNaN(num)) return;
 
                 const lineInput = document.getElementById('comment-line');
+                const currentVal = lineInput?.value.trim() || '';
+
                 if (ev.shiftKey && rangeStart !== null) {
                   const s = Math.min(rangeStart, num);
                   const e = Math.max(rangeStart, num);
                   if (lineInput) lineInput.value = s === e ? String(s) : `${s}-${e}`;
                   highlightRange(s, e);
-                } else if (rangeStart === num) {
-                  // Click same line again: deselect
+                } else if (currentVal && (rangeStart === num || currentVal.includes('-'))) {
                   rangeStart = null;
                   if (lineInput) lineInput.value = '';
                   highlightRange(null, null);
@@ -1381,28 +1536,6 @@
                   document.getElementById('comment-text')?.focus();
                 }
               });
-            });
-
-            // Text selection: drag across code lines to select range
-            diffContainer.addEventListener('mouseup', (ev) => {
-              if (ev.target.closest('.d2h-code-linenumber')) return;
-              const sel = window.getSelection();
-              if (!sel || sel.isCollapsed) return;
-              const rng = sel.getRangeAt(0);
-              const startEl = rng.startContainer.parentElement?.closest('tr');
-              const endEl = rng.endContainer.parentElement?.closest('tr');
-              if (!startEl || !endEl) return;
-              const gln = (tr) => { const l = tr.querySelector('.line-num2')?.textContent?.trim(); return l ? parseInt(l) : null; };
-              const sl = gln(startEl), el2 = gln(endEl);
-              if (!sl) return;
-              const s = Math.min(sl, el2 || sl), e = Math.max(sl, el2 || sl);
-              const lineInput = document.getElementById('comment-line');
-              if (lineInput) {
-                lineInput.value = (s !== e) ? `${s}-${e}` : String(s);
-                highlightRange(s, e);
-                rangeStart = s;
-                document.getElementById('comment-text')?.focus();
-              }
             });
           }, 80);
         } catch (err) {
@@ -1501,7 +1634,7 @@
           item.innerHTML = `
             <span class="archived-round">R${ac.round}</span>
             <span class="comment-line-ref">${ac.line ? 'L' + ac.line : 'General'}</span>
-            <span>${escapeHtml(ac.text)}</span>
+            <span class="archived-text">${escapeHtml(ac.text)}${ac.suggestion ? `<div class="comment-suggestion">${escapeHtml(ac.suggestion)}</div>` : ''}</span>
           `;
           archivedList.appendChild(item);
         }
@@ -1736,6 +1869,7 @@
     // --- Keyboard shortcuts ---
     document.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
 
       if (e.key === 'j') {
         e.preventDefault();
@@ -1773,6 +1907,40 @@
         }
       }
     }, 3000);
+
+    // --- Sidebar resize ---
+    (() => {
+      const sidebar = document.getElementById('sidebar');
+      const handle = document.getElementById('sidebar-resize');
+      let dragging = false;
+
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        dragging = true;
+        handle.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const newWidth = Math.min(600, Math.max(180, e.clientX));
+        sidebar.style.width = newWidth + 'px';
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        handle.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        localStorage.setItem('diffback-sidebar-width', sidebar.style.width);
+      });
+
+      // Restore saved width
+      const saved = localStorage.getItem('diffback-sidebar-width');
+      if (saved) sidebar.style.width = saved;
+    })();
 
     // --- Theme switcher ---
     function setTheme(name) {

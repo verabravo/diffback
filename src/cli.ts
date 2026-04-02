@@ -459,10 +459,12 @@ function startServer(port: number) {
         const body = JSON.parse(await parseBody(req));
         const { path: filePath, status, comments } = body;
 
+        const existing = state.files[filePath];
         state.files[filePath] = {
           status,
           hash: hashFile(filePath),
           comments: comments || [],
+          archivedComments: existing?.archivedComments || [],
           changedSinceReview: false,
         };
         saveState(state);
