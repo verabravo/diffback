@@ -923,6 +923,15 @@
       }
     }, 3000);
 
+    // --- Shortcuts toggle ---
+    document.getElementById('shortcuts-toggle').addEventListener('click', () => {
+      const body = document.getElementById('shortcuts-body');
+      const arrow = document.getElementById('shortcuts-arrow');
+      const hidden = body.style.display === 'none';
+      body.style.display = hidden ? 'block' : 'none';
+      arrow.innerHTML = hidden ? '\u25BE' : '\u25B8';
+    });
+
     // --- Sidebar resize ---
     (() => {
       const sidebar = document.getElementById('sidebar');

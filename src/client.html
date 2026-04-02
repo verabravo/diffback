@@ -171,8 +171,8 @@
     .toolbar {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 8px 16px;
+      gap: 8px;
+      padding: 6px 12px;
       background: var(--bg-secondary);
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
@@ -181,11 +181,22 @@
       font-weight: 600;
       font-size: 14px;
       color: var(--text-bright);
-      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+    .toolbar-spacer { flex: 1; }
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
     }
     .toolbar-stats {
       font-size: 13px;
       color: var(--text-muted);
+      white-space: nowrap;
     }
     .toolbar-stats .count { color: var(--cyan); font-weight: 600; }
     .btn {
@@ -222,6 +233,7 @@
       color: var(--orange);
     }
     .btn-danger:hover { background: var(--orange); color: var(--bg); }
+    .btn { white-space: nowrap; }
 
     /* Main layout */
     .main {
@@ -337,12 +349,22 @@
 
     /* Shortcuts legend in sidebar */
     .shortcuts-legend {
-      padding: 8px 12px;
+      padding: 0;
       border-top: 1px solid var(--border);
       background: var(--bg-secondary);
       font-size: 11px;
       color: var(--text-muted);
       flex-shrink: 0;
+    }
+    .shortcuts-toggle {
+      padding: 6px 12px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+    }
+    .shortcuts-toggle:hover { color: var(--text); }
+    .shortcuts-body {
+      padding: 0 12px 6px;
     }
     .shortcuts-legend div {
       display: flex;
@@ -378,6 +400,7 @@
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
       z-index: 10;
+      overflow-x: auto;
     }
     .file-nav-btn {
       background: none;
@@ -945,14 +968,17 @@
 <body>
   <div class="toolbar">
     <div class="toolbar-title" id="toolbar-title">diffback</div>
-    <div class="toolbar-stats" id="toolbar-stats"></div>
-    <select id="theme-selector" class="btn" title="Change theme" style="padding:4px 8px;cursor:pointer;">
-      <option value="solarized-dark">Solarized Dark</option>
-      <option value="monokai">Monokai</option>
-      <option value="github-light">GitHub Light</option>
-    </select>
-    <button class="btn btn-primary" id="btn-generate" title="Generate feedback prompt">Generate Feedback</button>
-    <button class="btn btn-danger" id="btn-finish" title="Finish review and clean up state">Finish Review</button>
+    <div class="toolbar-spacer"></div>
+    <div class="toolbar-actions">
+      <div class="toolbar-stats" id="toolbar-stats"></div>
+      <select id="theme-selector" class="btn" title="Change theme" style="padding:4px 8px;cursor:pointer;">
+        <option value="solarized-dark">Solarized Dark</option>
+        <option value="monokai">Monokai</option>
+        <option value="github-light">GitHub Light</option>
+      </select>
+      <button class="btn btn-primary" id="btn-generate" title="Generate feedback prompt">Generate</button>
+      <button class="btn btn-danger" id="btn-finish" title="Finish review and clean up state">Finish</button>
+    </div>
   </div>
 
   <div class="main">
@@ -969,11 +995,16 @@
       </div>
       <div class="file-list" id="file-list"></div>
       <div class="shortcuts-legend">
-        <div><span>Prev/Next file</span> <span><kbd>k</kbd> <kbd>j</kbd></span></div>
-        <div><span>Viewed file</span> <kbd>a</kbd></div>
-        <div><span>Add comment</span> <kbd>c</kbd></div>
-        <div><span>Generate feedback</span> <kbd>g</kbd></div>
-        <div><span>Send comment</span> <kbd>Cmd+Enter</kbd></div>
+        <div class="shortcuts-toggle" id="shortcuts-toggle">
+          <span>Shortcuts</span> <span id="shortcuts-arrow">&blacktriangleright;</span>
+        </div>
+        <div class="shortcuts-body" id="shortcuts-body" style="display:none;">
+          <div><span>Prev/Next file</span> <span><kbd>k</kbd> <kbd>j</kbd></span></div>
+          <div><span>Viewed file</span> <kbd>a</kbd></div>
+          <div><span>Add comment</span> <kbd>c</kbd></div>
+          <div><span>Generate feedback</span> <kbd>g</kbd></div>
+          <div><span>Send comment</span> <kbd>Cmd+Enter</kbd></div>
+        </div>
       </div>
     </div>
 
