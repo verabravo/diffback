@@ -37,13 +37,13 @@ When working with AI coding agents (Claude Code, Cursor, Copilot, etc.), the rev
 ## Install
 
 ```bash
-npm install -g diffback
+npm install -g diffback-review
 ```
 
 Or run directly with npx:
 
 ```bash
-npx diffback
+npx diffback-review
 ```
 
 ## Usage
@@ -51,7 +51,7 @@ npx diffback
 From any git repository with uncommitted changes:
 
 ```bash
-diffback
+npx diffback-review
 ```
 
 This starts a local server and opens your browser. Review the changes, add comments, then click **Generate Feedback** to get a prompt you can paste into your AI agent.
