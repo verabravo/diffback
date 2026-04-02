@@ -6,6 +6,7 @@
   <title>Code Review</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/base16/solarized-dark.min.css">
   <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
   <style>
     /* Solarized Dark */
@@ -467,33 +468,58 @@
     }
     .d2h-code-line, .d2h-code-side-line {
       background: var(--bg) !important;
-      color: var(--text) !important;
       width: 100% !important;
     }
     .d2h-code-line-ctn {
-      color: var(--text) !important;
       width: 100% !important;
     }
+    /* Default text color for non-highlighted code */
+    .d2h-code-line-ctn, .d2h-code-line-ctn * {
+      color: #93a1a1;
+    }
+    /* Let highlight.js syntax colors take priority */
+    .d2h-code-line-ctn .hljs-keyword,
+    .d2h-code-line-ctn .hljs-selector-tag,
+    .d2h-code-line-ctn .hljs-deletion { color: #859900 !important; }
+    .d2h-code-line-ctn .hljs-string,
+    .d2h-code-line-ctn .hljs-addition { color: #2aa198 !important; }
+    .d2h-code-line-ctn .hljs-built_in,
+    .d2h-code-line-ctn .hljs-type { color: #b58900 !important; }
+    .d2h-code-line-ctn .hljs-function,
+    .d2h-code-line-ctn .hljs-title { color: #268bd2 !important; }
+    .d2h-code-line-ctn .hljs-number,
+    .d2h-code-line-ctn .hljs-literal { color: #d33682 !important; }
+    .d2h-code-line-ctn .hljs-comment,
+    .d2h-code-line-ctn .hljs-quote { color: #586e75 !important; font-style: italic; }
+    .d2h-code-line-ctn .hljs-attr,
+    .d2h-code-line-ctn .hljs-attribute { color: #b58900 !important; }
+    .d2h-code-line-ctn .hljs-params { color: #93a1a1 !important; }
+    .d2h-code-line-ctn .hljs-meta,
+    .d2h-code-line-ctn .hljs-meta .hljs-keyword { color: #cb4b16 !important; }
+    .d2h-code-line-ctn .hljs-class .hljs-title,
+    .d2h-code-line-ctn .hljs-title.class_ { color: #b58900 !important; }
+    .d2h-code-line-ctn .hljs-variable,
+    .d2h-code-line-ctn .hljs-template-variable { color: #268bd2 !important; }
+    .d2h-code-line-ctn .hljs-regexp { color: #dc322f !important; }
+    .d2h-code-line-ctn .hljs-symbol { color: #6c71c4 !important; }
+    .d2h-code-line-ctn .hljs-selector-class,
+    .d2h-code-line-ctn .hljs-selector-id { color: #268bd2 !important; }
     /* Added lines */
     .d2h-ins, .d2h-ins .d2h-code-line-ctn {
       background: #0a3d0a !important;
-      color: #eee8d5 !important;
     }
     .d2h-ins .d2h-code-line-ctn ins,
     .d2h-ins.d2h-change .d2h-code-line-ctn ins {
       background: #1a5c1a !important;
-      color: #eee8d5 !important;
       text-decoration: none !important;
     }
     /* Deleted lines */
     .d2h-del, .d2h-del .d2h-code-line-ctn {
       background: #3d0a0a !important;
-      color: #eee8d5 !important;
     }
     .d2h-del .d2h-code-line-ctn del,
     .d2h-del.d2h-change .d2h-code-line-ctn del {
       background: #5c1a1a !important;
-      color: #eee8d5 !important;
       text-decoration: none !important;
     }
     /* Info/hunk headers - visually hidden but in DOM for fold indicator positioning */
