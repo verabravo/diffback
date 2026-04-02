@@ -3,7 +3,7 @@ import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from "node:fs";
 import { resolve, basename, dirname } from "node:path";
-import type { ReviewState, ChangedFile, FileReview, GeneralComment } from "./types.js";
+import type { ReviewState, ChangedFile, FileReview, GeneralComment, ArchivedComment } from "./types.js";
 
 declare const __CLIENT_HTML__: string;
 
@@ -108,6 +108,23 @@ function getChangedFiles(): ChangedFile[] {
     }
   }
 
+  // Get line stats (+/-)
+  if (hasCommits()) {
+    try {
+      const numstat = execSync("git diff --numstat HEAD", { cwd, encoding: "utf-8" }).trim();
+      if (numstat) {
+        for (const line of numstat.split("\n")) {
+          const [add, del, path] = line.split("\t");
+          const file = files.find((f) => f.path === path);
+          if (file && add !== "-") {
+            file.additions = parseInt(add!) || 0;
+            file.deletions = parseInt(del!) || 0;
+          }
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
   return files.sort((a, b) => a.path.localeCompare(b.path));
 }
 
@@ -187,9 +204,11 @@ function hashFile(filePath: string): string {
 function loadState(): ReviewState {
   try {
     const data = readFileSync(getStateFile(), "utf-8");
-    return JSON.parse(data);
+    const state = JSON.parse(data);
+    if (!state.round) state.round = 1;
+    return state;
   } catch {
-    return { files: {}, generalComments: [] };
+    return { round: 1, files: {}, generalComments: [] };
   }
 }
 
@@ -200,6 +219,7 @@ function saveState(state: ReviewState): void {
 
 function reconcileState(state: ReviewState, changedFiles: ChangedFile[]): ReviewState {
   const currentPaths = new Set(changedFiles.map((f) => f.path));
+  let hasChanges = false;
 
   // Remove files no longer in diff
   for (const path of Object.keys(state.files)) {
@@ -215,13 +235,27 @@ function reconcileState(state: ReviewState, changedFiles: ChangedFile[]): Review
 
     if (existing) {
       if (existing.hash !== currentHash) {
-        // File changed since last review
+        // File changed since last review - archive existing comments
+        if (existing.comments.length > 0) {
+          const archived: ArchivedComment[] = existing.comments.map((c) => ({
+            ...c,
+            archivedAt: new Date().toISOString(),
+            round: state.round,
+          }));
+          existing.archivedComments = [...(existing.archivedComments || []), ...archived];
+        }
         existing.status = "pending";
         existing.hash = currentHash;
+        existing.comments = [];
         existing.changedSinceReview = true;
+        hasChanges = true;
       }
     }
-    // New files get added when user first interacts with them
+  }
+
+  // If any files changed, bump the round
+  if (hasChanges) {
+    state.round = (state.round || 1) + 1;
   }
 
   return state;
@@ -375,6 +409,7 @@ function startServer(port: number) {
             pending: currentFiles.length - reviewed - hasFeedback,
           },
           projectName,
+          round: state.round,
         });
         return;
       }

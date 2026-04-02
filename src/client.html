@@ -9,8 +9,9 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/base16/solarized-dark.min.css">
   <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
   <style>
-    /* Solarized Dark */
     :root {
+      --sidebar-width: 280px;
+      /* Theme colors - overridden by theme classes */
       --bg: #002b36;
       --bg-secondary: #073642;
       --bg-tertiary: #0a4050;
@@ -26,8 +27,133 @@
       --red: #dc322f;
       --magenta: #d33682;
       --violet: #6c71c4;
-      --sidebar-width: 280px;
+      /* Diff backgrounds */
+      --diff-ins-bg: #0a3d0a;
+      --diff-ins-highlight: #1a5c1a;
+      --diff-del-bg: #3d0a0a;
+      --diff-del-highlight: #5c1a1a;
+      --diff-ins-linenumber: #082e08;
+      --diff-del-linenumber: #2e0808;
+      /* Syntax highlighting */
+      --hl-keyword: #859900;
+      --hl-string: #2aa198;
+      --hl-type: #b58900;
+      --hl-function: #268bd2;
+      --hl-number: #d33682;
+      --hl-comment: #586e75;
+      --hl-attr: #b58900;
+      --hl-meta: #cb4b16;
+      --hl-variable: #268bd2;
+      --hl-regexp: #dc322f;
+      --hl-symbol: #6c71c4;
     }
+
+    /* Solarized Dark (default) */
+    .theme-solarized-dark {
+      --bg: #002b36; --bg-secondary: #073642; --bg-tertiary: #0a4050;
+      --border: #586e75; --text: #93a1a1; --text-bright: #eee8d5; --text-muted: #657b83;
+      --accent: #268bd2; --cyan: #2aa198; --green: #859900; --yellow: #b58900;
+      --orange: #cb4b16; --red: #dc322f; --magenta: #d33682; --violet: #6c71c4;
+      --diff-ins-bg: #0a3d0a; --diff-ins-highlight: #1a5c1a;
+      --diff-del-bg: #3d0a0a; --diff-del-highlight: #5c1a1a;
+      --diff-ins-linenumber: #082e08; --diff-del-linenumber: #2e0808;
+      --hl-keyword: #859900; --hl-string: #2aa198; --hl-type: #b58900;
+      --hl-function: #268bd2; --hl-number: #d33682; --hl-comment: #586e75;
+      --hl-attr: #b58900; --hl-meta: #cb4b16; --hl-variable: #268bd2;
+      --hl-regexp: #dc322f; --hl-symbol: #6c71c4;
+    }
+
+    /* Monokai */
+    .theme-monokai {
+      --bg: #272822; --bg-secondary: #1e1f1c; --bg-tertiary: #3e3d32;
+      --border: #49483e; --text: #f8f8f2; --text-bright: #f8f8f0; --text-muted: #75715e;
+      --accent: #66d9ef; --cyan: #66d9ef; --green: #a6e22e; --yellow: #e6db74;
+      --orange: #fd971f; --red: #f92672; --magenta: #f92672; --violet: #ae81ff;
+      --diff-ins-bg: #2b3d0a; --diff-ins-highlight: #3d5c1a;
+      --diff-del-bg: #3d0a1a; --diff-del-highlight: #5c1a2a;
+      --diff-ins-linenumber: #232e08; --diff-del-linenumber: #2e0815;
+      --hl-keyword: #f92672; --hl-string: #e6db74; --hl-type: #66d9ef;
+      --hl-function: #a6e22e; --hl-number: #ae81ff; --hl-comment: #75715e;
+      --hl-attr: #a6e22e; --hl-meta: #f92672; --hl-variable: #f8f8f2;
+      --hl-regexp: #e6db74; --hl-symbol: #ae81ff;
+    }
+
+    /* GitHub Light */
+    .theme-github-light {
+      --bg: #ffffff; --bg-secondary: #f6f8fa; --bg-tertiary: #eaeef2;
+      --border: #d0d7de; --text: #1f2328; --text-bright: #1f2328; --text-muted: #656d76;
+      --accent: #0969da; --cyan: #0969da; --green: #1a7f37; --yellow: #9a6700;
+      --orange: #bc4c00; --red: #cf222e; --magenta: #8250df; --violet: #8250df;
+      --diff-ins-bg: #e6ffec; --diff-ins-highlight: #ccffd8;
+      --diff-del-bg: #ffebe9; --diff-del-highlight: #ffd7d5;
+      --diff-ins-linenumber: #e6ffec; --diff-del-linenumber: #ffebe9;
+      --hl-keyword: #cf222e; --hl-string: #0a3069; --hl-type: #8250df;
+      --hl-function: #6639ba; --hl-number: #0550ae; --hl-comment: #6e7781;
+      --hl-attr: #953800; --hl-meta: #cf222e; --hl-variable: #953800;
+      --hl-regexp: #0550ae; --hl-symbol: #8250df;
+    }
+
+    /* GitHub Light: force all diff2html backgrounds to white */
+    .theme-github-light .d2h-wrapper,
+    .theme-github-light .d2h-file-wrapper,
+    .theme-github-light .d2h-file-diff .d2h-code-pane,
+    .theme-github-light .d2h-code-line,
+    .theme-github-light .d2h-code-side-line,
+    .theme-github-light .d2h-diff-table,
+    .theme-github-light .d2h-diff-tbody,
+    .theme-github-light .d2h-code-line-ctn,
+    .theme-github-light td.d2h-code-line-ctn,
+    .theme-github-light tr {
+      background: #ffffff !important;
+    }
+    .theme-github-light .d2h-code-line-ctn,
+    .theme-github-light .d2h-code-line-ctn * {
+      color: #1f2328 !important;
+    }
+    /* Re-apply syntax colors over the forced text color */
+    .theme-github-light .d2h-code-line-ctn .hljs-keyword,
+    .theme-github-light .d2h-code-line-ctn .hljs-selector-tag { color: #cf222e !important; }
+    .theme-github-light .d2h-code-line-ctn .hljs-string { color: #0a3069 !important; }
+    .theme-github-light .d2h-code-line-ctn .hljs-built_in,
+    .theme-github-light .d2h-code-line-ctn .hljs-type,
+    .theme-github-light .d2h-code-line-ctn .hljs-title.class_ { color: #8250df !important; }
+    .theme-github-light .d2h-code-line-ctn .hljs-function,
+    .theme-github-light .d2h-code-line-ctn .hljs-title { color: #6639ba !important; }
+    .theme-github-light .d2h-code-line-ctn .hljs-number,
+    .theme-github-light .d2h-code-line-ctn .hljs-literal { color: #0550ae !important; }
+    .theme-github-light .d2h-code-line-ctn .hljs-comment,
+    .theme-github-light .d2h-code-line-ctn .hljs-quote { color: #6e7781 !important; }
+    .theme-github-light .d2h-code-line-ctn .hljs-attr,
+    .theme-github-light .d2h-code-line-ctn .hljs-variable { color: #953800 !important; }
+    .theme-github-light .d2h-code-line-ctn .hljs-meta { color: #cf222e !important; }
+    /* Light theme diff backgrounds */
+    .theme-github-light .d2h-ins,
+    .theme-github-light .d2h-ins .d2h-code-line-ctn { background: #e6ffec !important; }
+    .theme-github-light .d2h-ins .d2h-code-line-ctn ins { background: #ccffd8 !important; }
+    .theme-github-light .d2h-del,
+    .theme-github-light .d2h-del .d2h-code-line-ctn { background: #ffebe9 !important; }
+    .theme-github-light .d2h-del .d2h-code-line-ctn del { background: #ffd7d5 !important; }
+    .theme-github-light .d2h-ins .d2h-code-linenumber { background: #e6ffec !important; }
+    .theme-github-light .d2h-del .d2h-code-linenumber { background: #ffebe9 !important; }
+    .theme-github-light .d2h-file-header,
+    .theme-github-light .d2h-file-wrapper {
+      border-color: #d0d7de !important;
+    }
+    .theme-github-light .d2h-code-linenumber {
+      background: #f6f8fa !important;
+      color: #8c959f !important;
+      border-color: #d0d7de !important;
+    }
+
+    /* GitHub Light: scrollbar and fold overrides */
+    .theme-github-light ::-webkit-scrollbar-thumb { background: #d0d7de; }
+    .theme-github-light ::-webkit-scrollbar-thumb:hover { background: #8c959f; }
+    .theme-github-light .fold-indicator { color: #0969da; background: #f6f8fa; }
+    .theme-github-light .fold-indicator:hover { background: #eaeef2; }
+    .theme-github-light .fold-lines { color: #656d76; }
+    .theme-github-light .fold-line-num { color: #8c959f; }
+    .theme-github-light .comment-marker { background: #9a6700; }
+    .theme-github-light .inline-comment-bubble { background: #f6f8fa; border-left-color: #9a6700; color: #1f2328; }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -73,6 +199,17 @@
       font-weight: 500;
     }
     .btn:hover { border-color: var(--accent); }
+    select.btn {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath d='M0 0l4 6 4-6z' fill='%2393a1a1'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: 22px;
+    }
+    select.btn option {
+      background: var(--bg-secondary);
+      color: var(--text);
+    }
     .btn-primary {
       background: var(--accent);
       color: var(--bg);
@@ -103,7 +240,7 @@
       overflow: hidden;
     }
     .sidebar-header {
-      padding: 8px 12px;
+      padding: 6px 12px;
       font-size: 12px;
       font-weight: 600;
       color: var(--text-muted);
@@ -111,7 +248,29 @@
       letter-spacing: 0.5px;
       border-bottom: 1px solid var(--border);
       background: var(--bg-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
     }
+    .filter-bar {
+      display: flex;
+      gap: 2px;
+    }
+    .filter-btn {
+      background: none;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      cursor: pointer;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 400;
+    }
+    .filter-btn:hover { color: var(--text); border-color: var(--border); }
+    .filter-btn.active { color: var(--cyan); border-color: var(--cyan); font-weight: 600; }
     .file-list {
       flex: 1;
       overflow-y: auto;
@@ -150,6 +309,15 @@
       font-size: 12px;
     }
     .file-dir { color: var(--text-muted); }
+    .file-stats {
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 10px;
+      flex-shrink: 0;
+      display: flex;
+      gap: 4px;
+    }
+    .file-stats .stat-add { color: var(--green); }
+    .file-stats .stat-del { color: var(--orange); }
 
     /* Shortcuts legend in sidebar */
     .shortcuts-legend {
@@ -315,8 +483,7 @@
       gap: 8px;
       align-items: flex-start;
     }
-    .add-comment input[type="number"] {
-      width: 60px;
+    .add-comment input[type="text"] {
       padding: 6px 8px;
       background: var(--bg);
       border: 1px solid var(--border);
@@ -349,6 +516,50 @@
       cursor: pointer;
       margin-top: 4px;
       display: inline-block;
+    }
+    .quick-comments {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 6px 16px;
+      border-top: 1px solid var(--border);
+    }
+    .quick-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    .quick-btn:hover { color: var(--text); border-color: var(--accent); }
+    .archived-section {
+      border-top: 1px dashed var(--border);
+      padding: 6px 16px;
+    }
+    .archived-header {
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px 0;
+    }
+    .archived-header:hover { color: var(--text); }
+    .archived-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 4px 0;
+      font-size: 12px;
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+    .archived-item .archived-round {
+      font-size: 10px;
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+      padding: 1px 5px;
+      flex-shrink: 0;
     }
     .suggestion-input {
       margin-top: 4px;
@@ -475,51 +686,51 @@
     }
     /* Default text color for non-highlighted code */
     .d2h-code-line-ctn, .d2h-code-line-ctn * {
-      color: #93a1a1;
+      color: var(--text);
     }
-    /* Let highlight.js syntax colors take priority */
+    /* Syntax highlighting via CSS variables (theme-aware) */
     .d2h-code-line-ctn .hljs-keyword,
     .d2h-code-line-ctn .hljs-selector-tag,
-    .d2h-code-line-ctn .hljs-deletion { color: #859900 !important; }
+    .d2h-code-line-ctn .hljs-deletion { color: var(--hl-keyword) !important; }
     .d2h-code-line-ctn .hljs-string,
-    .d2h-code-line-ctn .hljs-addition { color: #2aa198 !important; }
+    .d2h-code-line-ctn .hljs-addition { color: var(--hl-string) !important; }
     .d2h-code-line-ctn .hljs-built_in,
-    .d2h-code-line-ctn .hljs-type { color: #b58900 !important; }
+    .d2h-code-line-ctn .hljs-type { color: var(--hl-type) !important; }
     .d2h-code-line-ctn .hljs-function,
-    .d2h-code-line-ctn .hljs-title { color: #268bd2 !important; }
+    .d2h-code-line-ctn .hljs-title { color: var(--hl-function) !important; }
     .d2h-code-line-ctn .hljs-number,
-    .d2h-code-line-ctn .hljs-literal { color: #d33682 !important; }
+    .d2h-code-line-ctn .hljs-literal { color: var(--hl-number) !important; }
     .d2h-code-line-ctn .hljs-comment,
-    .d2h-code-line-ctn .hljs-quote { color: #586e75 !important; font-style: italic; }
+    .d2h-code-line-ctn .hljs-quote { color: var(--hl-comment) !important; font-style: italic; }
     .d2h-code-line-ctn .hljs-attr,
-    .d2h-code-line-ctn .hljs-attribute { color: #b58900 !important; }
-    .d2h-code-line-ctn .hljs-params { color: #93a1a1 !important; }
+    .d2h-code-line-ctn .hljs-attribute { color: var(--hl-attr) !important; }
+    .d2h-code-line-ctn .hljs-params { color: var(--text) !important; }
     .d2h-code-line-ctn .hljs-meta,
-    .d2h-code-line-ctn .hljs-meta .hljs-keyword { color: #cb4b16 !important; }
+    .d2h-code-line-ctn .hljs-meta .hljs-keyword { color: var(--hl-meta) !important; }
     .d2h-code-line-ctn .hljs-class .hljs-title,
-    .d2h-code-line-ctn .hljs-title.class_ { color: #b58900 !important; }
+    .d2h-code-line-ctn .hljs-title.class_ { color: var(--hl-type) !important; }
     .d2h-code-line-ctn .hljs-variable,
-    .d2h-code-line-ctn .hljs-template-variable { color: #268bd2 !important; }
-    .d2h-code-line-ctn .hljs-regexp { color: #dc322f !important; }
-    .d2h-code-line-ctn .hljs-symbol { color: #6c71c4 !important; }
+    .d2h-code-line-ctn .hljs-template-variable { color: var(--hl-variable) !important; }
+    .d2h-code-line-ctn .hljs-regexp { color: var(--hl-regexp) !important; }
+    .d2h-code-line-ctn .hljs-symbol { color: var(--hl-symbol) !important; }
     .d2h-code-line-ctn .hljs-selector-class,
-    .d2h-code-line-ctn .hljs-selector-id { color: #268bd2 !important; }
+    .d2h-code-line-ctn .hljs-selector-id { color: var(--hl-function) !important; }
     /* Added lines */
     .d2h-ins, .d2h-ins .d2h-code-line-ctn {
-      background: #0a3d0a !important;
+      background: var(--diff-ins-bg) !important;
     }
     .d2h-ins .d2h-code-line-ctn ins,
     .d2h-ins.d2h-change .d2h-code-line-ctn ins {
-      background: #1a5c1a !important;
+      background: var(--diff-ins-highlight) !important;
       text-decoration: none !important;
     }
     /* Deleted lines */
     .d2h-del, .d2h-del .d2h-code-line-ctn {
-      background: #3d0a0a !important;
+      background: var(--diff-del-bg) !important;
     }
     .d2h-del .d2h-code-line-ctn del,
     .d2h-del.d2h-change .d2h-code-line-ctn del {
-      background: #5c1a1a !important;
+      background: var(--diff-del-highlight) !important;
       text-decoration: none !important;
     }
     /* Info/hunk headers - visually hidden but in DOM for fold indicator positioning */
@@ -533,17 +744,17 @@
     }
     /* Line numbers */
     .d2h-code-linenumber {
-      background: #073642 !important;
-      color: #657b83 !important;
-      border-color: #586e75 !important;
+      background: var(--bg-secondary) !important;
+      color: var(--text-muted) !important;
+      border-color: var(--border) !important;
     }
     .d2h-ins .d2h-code-linenumber {
-      background: #082e08 !important;
-      color: #839496 !important;
+      background: var(--diff-ins-linenumber) !important;
+      color: var(--text-muted) !important;
     }
     .d2h-del .d2h-code-linenumber {
-      background: #2e0808 !important;
-      color: #839496 !important;
+      background: var(--diff-del-linenumber) !important;
+      color: var(--text-muted) !important;
     }
     /* Empty placeholder cells */
     .d2h-code-side-emptyplaceholder, .d2h-emptyplaceholder {
@@ -633,7 +844,20 @@
       font-size: 12px;
       color: var(--text-bright);
       line-height: 1.4;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
     }
+    .inline-comment-bubble .inline-content { flex: 1; }
+    .inline-comment-delete {
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      padding: 0 2px;
+      flex-shrink: 0;
+    }
+    .inline-comment-delete:hover { color: var(--orange); }
     .inline-comment-bubble .inline-line-ref {
       color: var(--cyan);
       font-family: "SF Mono", "Fira Code", monospace;
@@ -657,13 +881,26 @@
   <div class="toolbar">
     <div class="toolbar-title" id="toolbar-title">diffback</div>
     <div class="toolbar-stats" id="toolbar-stats"></div>
+    <select id="theme-selector" class="btn" title="Change theme" style="padding:4px 8px;cursor:pointer;">
+      <option value="solarized-dark">Solarized Dark</option>
+      <option value="monokai">Monokai</option>
+      <option value="github-light">GitHub Light</option>
+    </select>
     <button class="btn btn-primary" id="btn-generate" title="Generate feedback prompt">Generate Feedback</button>
     <button class="btn btn-danger" id="btn-finish" title="Finish review and clean up state">Finish Review</button>
   </div>
 
   <div class="main">
     <div class="sidebar">
-      <div class="sidebar-header">Files</div>
+      <div class="sidebar-header">
+        <span>Files</span>
+        <div class="filter-bar" id="filter-bar">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="pending">Pending</button>
+          <button class="filter-btn" data-filter="viewed">Viewed</button>
+          <button class="filter-btn" data-filter="feedback">Feedback</button>
+        </div>
+      </div>
       <div class="file-list" id="file-list"></div>
       <div class="shortcuts-legend">
         <div><span>Prev/Next file</span> <span><kbd>k</kbd> <kbd>j</kbd></span></div>
@@ -688,7 +925,9 @@
       projectName: '',
       selectedFile: null,
       currentDiff: null,
-      fileContents: {}, // cache for expanded fold content
+      fileContents: {},
+      filter: 'all',
+      round: 1,
     };
 
     // --- API ---
@@ -707,6 +946,7 @@
       appState.generalComments = data.generalComments || [];
       appState.summary = data.summary;
       appState.projectName = data.projectName;
+      appState.round = data.round || 1;
       renderToolbar();
       renderFileList();
     }
@@ -746,8 +986,19 @@
     }
 
     // --- Navigation helpers ---
+    function getFilteredFiles() {
+      return appState.files.filter(f => {
+        if (appState.filter === 'all') return true;
+        const status = f.review?.status;
+        if (appState.filter === 'pending') return !status || status === 'pending';
+        if (appState.filter === 'viewed') return status === 'reviewed';
+        if (appState.filter === 'feedback') return status === 'has-feedback' || (f.review?.comments?.length > 0);
+        return true;
+      });
+    }
+
     function navigateFile(direction) {
-      const files = appState.files;
+      const files = getFilteredFiles();
       if (files.length === 0) return;
       const currentIdx = files.findIndex(f => f.path === appState.selectedFile);
       let next;
@@ -775,7 +1026,9 @@
       const container = document.getElementById('file-list');
       container.innerHTML = '';
 
-      for (const file of appState.files) {
+      const filtered = getFilteredFiles();
+
+      for (const file of filtered) {
         const el = document.createElement('div');
         el.className = 'file-item' + (appState.selectedFile === file.path ? ' active' : '');
         el.dataset.path = file.path;
@@ -816,10 +1069,35 @@
         el.appendChild(statusIcon);
         el.appendChild(reviewIcon);
         el.appendChild(pathEl);
+
+        // Line stats (+/-)
+        if (file.additions !== undefined || file.deletions !== undefined) {
+          const stats = document.createElement('span');
+          stats.className = 'file-stats';
+          const add = file.additions || 0;
+          const del = file.deletions || 0;
+          if (add > 0) stats.innerHTML += `<span class="stat-add">+${add}</span>`;
+          if (del > 0) stats.innerHTML += `<span class="stat-del">-${del}</span>`;
+          el.appendChild(stats);
+        }
+
         el.addEventListener('click', () => loadDiff(file.path));
         container.appendChild(el);
       }
+
+      // Update filter button counts
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === appState.filter);
+      });
     }
+
+    // --- Filter handlers ---
+    document.getElementById('filter-bar').addEventListener('click', (e) => {
+      const btn = e.target.closest('.filter-btn');
+      if (!btn) return;
+      appState.filter = btn.dataset.filter;
+      renderFileList();
+    });
 
     // --- Parse hunk ranges from @@ header ---
     function parseHunkHeader(headerText) {
@@ -909,51 +1187,87 @@
     }
 
     // --- Insert inline comment markers & bubbles ---
+    function getCommentEndLine(comment) {
+      // Returns the last line number for a comment (for range "15-22" returns 22, for "15" returns 15)
+      if (!comment.line) return null;
+      const parts = String(comment.line).split('-');
+      return parseInt(parts[parts.length - 1]);
+    }
+    function getCommentStartLine(comment) {
+      if (!comment.line) return null;
+      return parseInt(String(comment.line).split('-')[0]);
+    }
+
     function insertInlineComments(diffContainer, comments) {
       const lineComments = comments.filter(c => c.line !== null);
       if (lineComments.length === 0) return;
 
-      // Group comments by line number
-      const byLine = {};
+      // Group comments by their end line (where the bubble appears)
+      const byEndLine = {};
+      const markerLines = new Set();
       for (const c of lineComments) {
-        if (!byLine[c.line]) byLine[c.line] = [];
-        byLine[c.line].push(c);
+        const endLine = getCommentEndLine(c);
+        const startLine = getCommentStartLine(c);
+        if (!endLine) continue;
+        if (!byEndLine[endLine]) byEndLine[endLine] = [];
+        byEndLine[endLine].push(c);
+        // Mark all lines in range
+        for (let l = startLine; l <= endLine; l++) markerLines.add(l);
       }
 
-      // Find all line number cells and match
       diffContainer.querySelectorAll('.d2h-code-linenumber').forEach(el => {
         const lineNum2 = el.querySelector('.line-num2')?.textContent?.trim();
         const num = parseInt(lineNum2);
-        if (isNaN(num) || !byLine[num]) return;
+        if (isNaN(num)) return;
 
-        // Add marker dot
-        el.style.position = 'relative';
-        const marker = document.createElement('span');
-        marker.className = 'comment-marker';
-        el.appendChild(marker);
+        // Add marker dot to all lines in any comment range
+        if (markerLines.has(num)) {
+          el.style.position = 'relative';
+          const marker = document.createElement('span');
+          marker.className = 'comment-marker';
+          el.appendChild(marker);
+        }
 
-        // Insert comment bubble row after this line's <tr>
+        // Insert bubble after the end line
+        if (!byEndLine[num]) return;
         const tr = el.closest('tr');
         if (!tr) return;
 
-        for (const comment of byLine[num]) {
+        for (const comment of byEndLine[num]) {
           const commentTr = document.createElement('tr');
           commentTr.className = 'inline-comment-row';
           const td = document.createElement('td');
           td.colSpan = 99;
           td.innerHTML = `
             <div class="inline-comment-bubble">
-              <span class="inline-line-ref">L${comment.line}</span>
-              ${escapeHtml(comment.text)}
-              ${comment.suggestion ? `<div class="inline-suggestion">${escapeHtml(comment.suggestion)}</div>` : ''}
+              <div class="inline-content">
+                <span class="inline-line-ref">L${comment.line}</span>
+                ${escapeHtml(comment.text)}
+                ${comment.suggestion ? `<div class="inline-suggestion">${escapeHtml(comment.suggestion)}</div>` : ''}
+              </div>
+              <span class="inline-comment-delete" data-id="${comment.id}" title="Delete comment">&times;</span>
             </div>
           `;
+          td.querySelector('.inline-comment-delete').addEventListener('click', () => {
+            const file = appState.files.find(f => f.path === appState.selectedFile);
+            if (!file) return;
+            const review = file.review || { comments: [] };
+            const newComments = (review.comments || []).filter(c => c.id !== comment.id);
+            const newStatus = newComments.length > 0 ? 'has-feedback' : 'pending';
+            const diffEl = document.querySelector('.diff-container');
+            const scrollTop = diffEl ? diffEl.scrollTop : 0;
+            saveReview(file.path, newStatus, newComments).then(() => {
+              loadDiff(file.path).then(() => {
+                const newDiffEl = document.querySelector('.diff-container');
+                if (newDiffEl) newDiffEl.scrollTop = scrollTop;
+              });
+            });
+          });
           commentTr.appendChild(td);
           tr.after(commentTr);
         }
 
-        // Remove from map so we don't double-insert
-        delete byLine[num];
+        delete byEndLine[num];
       });
     }
 
@@ -1022,11 +1336,10 @@
                 const lineNum = el.querySelector('.line-num2')?.textContent?.trim()
                   || el.querySelector('.line-num1')?.textContent?.trim()
                   || el.textContent?.trim();
-                const num = parseInt(lineNum);
-                if (!isNaN(num)) {
+                if (lineNum) {
                   const lineInput = document.getElementById('comment-line');
                   if (lineInput) {
-                    lineInput.value = num;
+                    lineInput.value = lineNum;
                     document.getElementById('comment-text')?.focus();
                   }
                 }
@@ -1084,7 +1397,7 @@
       addComment.className = 'add-comment';
       addComment.innerHTML = `
         <div class="add-comment-row">
-          <input type="number" id="comment-line" placeholder="Line" min="1" title="Line number (leave empty for general file comment)">
+          <input type="text" id="comment-line" placeholder="L# or L#-#" style="width:80px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;font-family:'SF Mono','Fira Code',monospace;" title="Line number or range (e.g. 42 or 15-22). Leave empty for general file comment.">
           <textarea id="comment-text" placeholder="Add a comment (line optional)..." rows="1"></textarea>
           <button class="btn" id="btn-add-comment">Add</button>
         </div>
@@ -1094,6 +1407,55 @@
         </div>
       `;
       reviewSection.appendChild(addComment);
+
+      // Quick comment buttons
+      const quickComments = document.createElement('div');
+      quickComments.className = 'quick-comments';
+      const presets = ['Naming', 'Missing test', 'Unnecessary change', 'Delete this file', 'Needs refactor', 'Wrong approach'];
+      for (const preset of presets) {
+        const btn = document.createElement('button');
+        btn.className = 'quick-btn';
+        btn.textContent = preset;
+        btn.addEventListener('click', () => {
+          const lineVal = document.getElementById('comment-line').value.trim() || null;
+          const newComment = { id: 'c-' + Date.now(), line: lineVal, text: preset, suggestion: null };
+          const newComments = [...comments, newComment];
+          const diffEl = document.querySelector('.diff-container');
+          const scrollTop = diffEl ? diffEl.scrollTop : 0;
+          saveReview(file.path, 'has-feedback', newComments).then(() => {
+            loadDiff(file.path).then(() => {
+              const newDiffEl = document.querySelector('.diff-container');
+              if (newDiffEl) newDiffEl.scrollTop = scrollTop;
+            });
+          });
+        });
+        quickComments.appendChild(btn);
+      }
+      reviewSection.appendChild(quickComments);
+
+      // Archived comments from previous rounds
+      const archived = review.archivedComments || [];
+      if (archived.length > 0) {
+        const archivedSection = document.createElement('div');
+        archivedSection.className = 'archived-section';
+        archivedSection.innerHTML = `<div class="archived-header" id="toggle-archived">Previous round comments (${archived.length}) \u25B8</div>`;
+        const archivedList = document.createElement('div');
+        archivedList.id = 'archived-list';
+        archivedList.style.display = 'none';
+        for (const ac of archived) {
+          const item = document.createElement('div');
+          item.className = 'archived-item';
+          item.innerHTML = `
+            <span class="archived-round">R${ac.round}</span>
+            <span class="comment-line-ref">${ac.line ? 'L' + ac.line : 'General'}</span>
+            <span>${escapeHtml(ac.text)}</span>
+          `;
+          archivedList.appendChild(item);
+        }
+        archivedSection.appendChild(archivedList);
+        reviewSection.appendChild(archivedSection);
+      }
+
       container.appendChild(reviewSection);
 
       // General comments section
@@ -1149,11 +1511,50 @@
         body.style.display = body.style.display === 'none' ? 'block' : 'none';
       });
 
+      // Archived comments toggle
+      const toggleArchived = document.getElementById('toggle-archived');
+      if (toggleArchived) {
+        toggleArchived.addEventListener('click', () => {
+          const list = document.getElementById('archived-list');
+          const isHidden = list.style.display === 'none';
+          list.style.display = isHidden ? 'block' : 'none';
+          toggleArchived.textContent = `Previous round comments (${archived.length}) ${isHidden ? '\u25BE' : '\u25B8'}`;
+        });
+      }
+
+      // Text selection on diff to auto-fill line range
+      diffContainer.addEventListener('mouseup', () => {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed) return;
+
+        // Find line numbers from the selection range
+        const range = sel.getRangeAt(0);
+        const startEl = range.startContainer.parentElement?.closest('tr');
+        const endEl = range.endContainer.parentElement?.closest('tr');
+        if (!startEl || !endEl) return;
+
+        const getLineNum = (tr) => {
+          const ln = tr.querySelector('.line-num2')?.textContent?.trim();
+          return ln ? parseInt(ln) : null;
+        };
+
+        const startLine = getLineNum(startEl);
+        const endLine = getLineNum(endEl);
+        if (!startLine) return;
+
+        const lineInput = document.getElementById('comment-line');
+        if (lineInput) {
+          lineInput.value = (endLine && endLine !== startLine) ? `${startLine}-${endLine}` : String(startLine);
+          document.getElementById('comment-text')?.focus();
+        }
+      });
+
       function addFileComment() {
         const text = document.getElementById('comment-text').value.trim();
         if (!text) return;
 
-        const line = parseInt(document.getElementById('comment-line').value) || null;
+        const lineRaw = document.getElementById('comment-line').value.trim();
+        const line = lineRaw || null; // Keep as string for ranges like "15-22"
         const suggestion = document.getElementById('comment-suggestion')?.value.trim() || null;
 
         const newComment = {
@@ -1310,10 +1711,10 @@
     document.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-      if (e.key === 'j' || e.key === 'ArrowDown') {
+      if (e.key === 'j') {
         e.preventDefault();
         navigateFile('next');
-      } else if (e.key === 'k' || e.key === 'ArrowUp') {
+      } else if (e.key === 'k') {
         e.preventDefault();
         navigateFile('prev');
       } else if (e.key === 'a') {
@@ -1346,6 +1747,23 @@
         }
       }
     }, 3000);
+
+    // --- Theme switcher ---
+    function setTheme(name) {
+      document.documentElement.className = `theme-${name}`;
+      localStorage.setItem('diffback-theme', name);
+      document.getElementById('theme-selector').value = name;
+    }
+
+    document.getElementById('theme-selector').addEventListener('change', (e) => {
+      setTheme(e.target.value);
+      // Re-render diff to apply new colors
+      if (appState.selectedFile) loadDiff(appState.selectedFile);
+    });
+
+    // Load saved theme
+    const savedTheme = localStorage.getItem('diffback-theme') || 'solarized-dark';
+    setTheme(savedTheme);
 
     // --- Init ---
     loadFiles();
