@@ -461,15 +461,20 @@ function startServer(port: number) {
         return;
       }
 
-      // API: Reset state (finish review)
+      // API: Reset state (finish review) -- cleans up, responds, then shuts down
       if (path === "/api/reset" && req.method === "POST") {
         try {
           rmSync(getStateDir(), { recursive: true, force: true });
         } catch {
           // Ignore
         }
-        state = { files: {}, generalComments: [] };
         json(res, { ok: true });
+        // Shut down after the client countdown finishes (5s + buffer)
+        setTimeout(() => {
+          console.log("\n  Review finished. State cleared. Bye!");
+          server.close();
+          process.exit(0);
+        }, 6000);
         return;
       }
 

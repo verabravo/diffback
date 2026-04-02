@@ -1250,10 +1250,27 @@
     document.getElementById('btn-finish').addEventListener('click', async () => {
       if (!confirm('Finish review and clear all state? This cannot be undone.')) return;
       await api('/api/reset', { method: 'POST', body: {} });
-      appState = { files: [], generalComments: [], summary: null, projectName: appState.projectName, selectedFile: null, currentDiff: null, fileContents: {} };
-      renderToolbar();
-      renderFileList();
-      document.getElementById('content').innerHTML = '<div class="empty-state">Review finished! You can close this tab.</div>';
+
+      // Show goodbye screen with countdown
+      document.body.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#002b36;color:#93a1a1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;text-align:center;gap:16px;">
+          <div style="font-size:48px;">&#128640;</div>
+          <div style="font-size:22px;color:#eee8d5;font-weight:600;">Thanks for using diffback!</div>
+          <div style="font-size:14px;color:#657b83;">Review state cleared. Go ship that feedback.</div>
+          <div style="margin-top:24px;font-size:13px;color:#586e75;">Closing in <span id="countdown">5</span>s...</div>
+        </div>
+      `;
+
+      let seconds = 5;
+      const interval = setInterval(() => {
+        seconds--;
+        const el = document.getElementById('countdown');
+        if (el) el.textContent = String(seconds);
+        if (seconds <= 0) {
+          clearInterval(interval);
+          window.close();
+        }
+      }, 1000);
     });
 
     // --- Helpers ---
