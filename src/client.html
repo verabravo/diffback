@@ -9,8 +9,9 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/base16/solarized-dark.min.css">
   <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
   <style>
-    /* Solarized Dark */
     :root {
+      --sidebar-width: 280px;
+      /* Theme colors - overridden by theme classes */
       --bg: #002b36;
       --bg-secondary: #073642;
       --bg-tertiary: #0a4050;
@@ -26,8 +27,133 @@
       --red: #dc322f;
       --magenta: #d33682;
       --violet: #6c71c4;
-      --sidebar-width: 280px;
+      /* Diff backgrounds */
+      --diff-ins-bg: #0a3d0a;
+      --diff-ins-highlight: #1a5c1a;
+      --diff-del-bg: #3d0a0a;
+      --diff-del-highlight: #5c1a1a;
+      --diff-ins-linenumber: #082e08;
+      --diff-del-linenumber: #2e0808;
+      /* Syntax highlighting */
+      --hl-keyword: #859900;
+      --hl-string: #2aa198;
+      --hl-type: #b58900;
+      --hl-function: #268bd2;
+      --hl-number: #d33682;
+      --hl-comment: #586e75;
+      --hl-attr: #b58900;
+      --hl-meta: #cb4b16;
+      --hl-variable: #268bd2;
+      --hl-regexp: #dc322f;
+      --hl-symbol: #6c71c4;
     }
+
+    /* Solarized Dark (default) */
+    .theme-solarized-dark {
+      --bg: #002b36; --bg-secondary: #073642; --bg-tertiary: #0a4050;
+      --border: #586e75; --text: #93a1a1; --text-bright: #eee8d5; --text-muted: #657b83;
+      --accent: #268bd2; --cyan: #2aa198; --green: #859900; --yellow: #b58900;
+      --orange: #cb4b16; --red: #dc322f; --magenta: #d33682; --violet: #6c71c4;
+      --diff-ins-bg: #0a3d0a; --diff-ins-highlight: #1a5c1a;
+      --diff-del-bg: #3d0a0a; --diff-del-highlight: #5c1a1a;
+      --diff-ins-linenumber: #082e08; --diff-del-linenumber: #2e0808;
+      --hl-keyword: #859900; --hl-string: #2aa198; --hl-type: #b58900;
+      --hl-function: #268bd2; --hl-number: #d33682; --hl-comment: #586e75;
+      --hl-attr: #b58900; --hl-meta: #cb4b16; --hl-variable: #268bd2;
+      --hl-regexp: #dc322f; --hl-symbol: #6c71c4;
+    }
+
+    /* Monokai */
+    .theme-monokai {
+      --bg: #272822; --bg-secondary: #1e1f1c; --bg-tertiary: #3e3d32;
+      --border: #49483e; --text: #f8f8f2; --text-bright: #f8f8f0; --text-muted: #75715e;
+      --accent: #66d9ef; --cyan: #66d9ef; --green: #a6e22e; --yellow: #e6db74;
+      --orange: #fd971f; --red: #f92672; --magenta: #f92672; --violet: #ae81ff;
+      --diff-ins-bg: #2b3d0a; --diff-ins-highlight: #3d5c1a;
+      --diff-del-bg: #3d0a1a; --diff-del-highlight: #5c1a2a;
+      --diff-ins-linenumber: #232e08; --diff-del-linenumber: #2e0815;
+      --hl-keyword: #f92672; --hl-string: #e6db74; --hl-type: #66d9ef;
+      --hl-function: #a6e22e; --hl-number: #ae81ff; --hl-comment: #75715e;
+      --hl-attr: #a6e22e; --hl-meta: #f92672; --hl-variable: #f8f8f2;
+      --hl-regexp: #e6db74; --hl-symbol: #ae81ff;
+    }
+
+    /* GitHub Light */
+    .theme-github-light {
+      --bg: #ffffff; --bg-secondary: #f6f8fa; --bg-tertiary: #eaeef2;
+      --border: #d0d7de; --text: #1f2328; --text-bright: #1f2328; --text-muted: #656d76;
+      --accent: #0969da; --cyan: #0969da; --green: #1a7f37; --yellow: #9a6700;
+      --orange: #bc4c00; --red: #cf222e; --magenta: #8250df; --violet: #8250df;
+      --diff-ins-bg: #e6ffec; --diff-ins-highlight: #ccffd8;
+      --diff-del-bg: #ffebe9; --diff-del-highlight: #ffd7d5;
+      --diff-ins-linenumber: #e6ffec; --diff-del-linenumber: #ffebe9;
+      --hl-keyword: #cf222e; --hl-string: #0a3069; --hl-type: #8250df;
+      --hl-function: #6639ba; --hl-number: #0550ae; --hl-comment: #6e7781;
+      --hl-attr: #953800; --hl-meta: #cf222e; --hl-variable: #953800;
+      --hl-regexp: #0550ae; --hl-symbol: #8250df;
+    }
+
+    /* GitHub Light: force all diff2html backgrounds to white */
+    .theme-github-light .d2h-wrapper,
+    .theme-github-light .d2h-file-wrapper,
+    .theme-github-light .d2h-file-diff .d2h-code-pane,
+    .theme-github-light .d2h-code-line,
+    .theme-github-light .d2h-code-side-line,
+    .theme-github-light .d2h-diff-table,
+    .theme-github-light .d2h-diff-tbody,
+    .theme-github-light .d2h-code-line-ctn,
+    .theme-github-light td.d2h-code-line-ctn,
+    .theme-github-light tr {
+      background: #ffffff !important;
+    }
+    .theme-github-light .d2h-code-line-ctn,
+    .theme-github-light .d2h-code-line-ctn * {
+      color: #1f2328 !important;
+    }
+    /* Re-apply syntax colors over the forced text color */
+    .theme-github-light .d2h-code-line-ctn .hljs-keyword,
+    .theme-github-light .d2h-code-line-ctn .hljs-selector-tag { color: #cf222e !important; }
+    .theme-github-light .d2h-code-line-ctn .hljs-string { color: #0a3069 !important; }
+    .theme-github-light .d2h-code-line-ctn .hljs-built_in,
+    .theme-github-light .d2h-code-line-ctn .hljs-type,
+    .theme-github-light .d2h-code-line-ctn .hljs-title.class_ { color: #8250df !important; }
+    .theme-github-light .d2h-code-line-ctn .hljs-function,
+    .theme-github-light .d2h-code-line-ctn .hljs-title { color: #6639ba !important; }
+    .theme-github-light .d2h-code-line-ctn .hljs-number,
+    .theme-github-light .d2h-code-line-ctn .hljs-literal { color: #0550ae !important; }
+    .theme-github-light .d2h-code-line-ctn .hljs-comment,
+    .theme-github-light .d2h-code-line-ctn .hljs-quote { color: #6e7781 !important; }
+    .theme-github-light .d2h-code-line-ctn .hljs-attr,
+    .theme-github-light .d2h-code-line-ctn .hljs-variable { color: #953800 !important; }
+    .theme-github-light .d2h-code-line-ctn .hljs-meta { color: #cf222e !important; }
+    /* Light theme diff backgrounds */
+    .theme-github-light .d2h-ins,
+    .theme-github-light .d2h-ins .d2h-code-line-ctn { background: #e6ffec !important; }
+    .theme-github-light .d2h-ins .d2h-code-line-ctn ins { background: #ccffd8 !important; }
+    .theme-github-light .d2h-del,
+    .theme-github-light .d2h-del .d2h-code-line-ctn { background: #ffebe9 !important; }
+    .theme-github-light .d2h-del .d2h-code-line-ctn del { background: #ffd7d5 !important; }
+    .theme-github-light .d2h-ins .d2h-code-linenumber { background: #e6ffec !important; }
+    .theme-github-light .d2h-del .d2h-code-linenumber { background: #ffebe9 !important; }
+    .theme-github-light .d2h-file-header,
+    .theme-github-light .d2h-file-wrapper {
+      border-color: #d0d7de !important;
+    }
+    .theme-github-light .d2h-code-linenumber {
+      background: #f6f8fa !important;
+      color: #8c959f !important;
+      border-color: #d0d7de !important;
+    }
+
+    /* GitHub Light: scrollbar and fold overrides */
+    .theme-github-light ::-webkit-scrollbar-thumb { background: #d0d7de; }
+    .theme-github-light ::-webkit-scrollbar-thumb:hover { background: #8c959f; }
+    .theme-github-light .fold-indicator { color: #0969da; background: #f6f8fa; }
+    .theme-github-light .fold-indicator:hover { background: #eaeef2; }
+    .theme-github-light .fold-lines { color: #656d76; }
+    .theme-github-light .fold-line-num { color: #8c959f; }
+    .theme-github-light .comment-marker { background: #9a6700; }
+    .theme-github-light .inline-comment-bubble { background: #f6f8fa; border-left-color: #9a6700; color: #1f2328; }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -45,8 +171,8 @@
     .toolbar {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 8px 16px;
+      gap: 8px;
+      padding: 6px 12px;
       background: var(--bg-secondary);
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
@@ -55,11 +181,22 @@
       font-weight: 600;
       font-size: 14px;
       color: var(--text-bright);
-      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+    .toolbar-spacer { flex: 1; }
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
     }
     .toolbar-stats {
       font-size: 13px;
       color: var(--text-muted);
+      white-space: nowrap;
     }
     .toolbar-stats .count { color: var(--cyan); font-weight: 600; }
     .btn {
@@ -73,6 +210,17 @@
       font-weight: 500;
     }
     .btn:hover { border-color: var(--accent); }
+    select.btn {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Cpath d='M0 0l4 6 4-6z' fill='%2393a1a1'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: 22px;
+    }
+    select.btn option {
+      background: var(--bg-secondary);
+      color: var(--text);
+    }
     .btn-primary {
       background: var(--accent);
       color: var(--bg);
@@ -85,6 +233,7 @@
       color: var(--orange);
     }
     .btn-danger:hover { background: var(--orange); color: var(--bg); }
+    .btn { white-space: nowrap; }
 
     /* Main layout */
     .main {
@@ -96,14 +245,30 @@
     /* Sidebar */
     .sidebar {
       width: var(--sidebar-width);
+      min-width: 180px;
+      max-width: 600px;
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       flex-shrink: 0;
       overflow: hidden;
+      position: relative;
+    }
+    .sidebar-resize {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 4px;
+      height: 100%;
+      cursor: col-resize;
+      z-index: 20;
+    }
+    .sidebar-resize:hover,
+    .sidebar-resize.dragging {
+      background: var(--accent);
     }
     .sidebar-header {
-      padding: 8px 12px;
+      padding: 6px 12px;
       font-size: 12px;
       font-weight: 600;
       color: var(--text-muted);
@@ -111,7 +276,29 @@
       letter-spacing: 0.5px;
       border-bottom: 1px solid var(--border);
       background: var(--bg-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
     }
+    .filter-bar {
+      display: flex;
+      gap: 2px;
+    }
+    .filter-btn {
+      background: none;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      cursor: pointer;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 400;
+    }
+    .filter-btn:hover { color: var(--text); border-color: var(--border); }
+    .filter-btn.active { color: var(--cyan); border-color: var(--cyan); font-weight: 600; }
     .file-list {
       flex: 1;
       overflow-y: auto;
@@ -150,15 +337,34 @@
       font-size: 12px;
     }
     .file-dir { color: var(--text-muted); }
+    .file-stats {
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 10px;
+      flex-shrink: 0;
+      display: flex;
+      gap: 4px;
+    }
+    .file-stats .stat-add { color: var(--green); }
+    .file-stats .stat-del { color: var(--orange); }
 
     /* Shortcuts legend in sidebar */
     .shortcuts-legend {
-      padding: 8px 12px;
+      padding: 0;
       border-top: 1px solid var(--border);
       background: var(--bg-secondary);
       font-size: 11px;
       color: var(--text-muted);
       flex-shrink: 0;
+    }
+    .shortcuts-toggle {
+      padding: 6px 12px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+    }
+    .shortcuts-toggle:hover { color: var(--text); }
+    .shortcuts-body {
+      padding: 0 12px 6px;
     }
     .shortcuts-legend div {
       display: flex;
@@ -194,6 +400,7 @@
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
       z-index: 10;
+      overflow-x: auto;
     }
     .file-nav-btn {
       background: none;
@@ -315,8 +522,7 @@
       gap: 8px;
       align-items: flex-start;
     }
-    .add-comment input[type="number"] {
-      width: 60px;
+    .add-comment input[type="text"] {
       padding: 6px 8px;
       background: var(--bg);
       border: 1px solid var(--border);
@@ -349,6 +555,79 @@
       cursor: pointer;
       margin-top: 4px;
       display: inline-block;
+    }
+    .quick-comments {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 6px 16px;
+      border-top: 1px solid var(--border);
+    }
+    .quick-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    .quick-btn:hover { color: var(--text); border-color: var(--accent); }
+    .archived-section {
+      border-top: 1px dashed var(--border);
+      padding: 6px 16px;
+    }
+    .archived-header {
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px 0;
+    }
+    .archived-header:hover { color: var(--text); }
+    .archived-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 6px 0;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .archived-item:last-child { border-bottom: none; }
+    .archived-item .archived-round {
+      font-size: 10px;
+      background: var(--violet);
+      color: var(--bg);
+      border-radius: 3px;
+      padding: 1px 6px;
+      flex-shrink: 0;
+      font-weight: 600;
+    }
+    .archived-item .archived-text { flex: 1; }
+    /* Inline archived comment bubble (dimmed, dashed border) */
+    .inline-archived-bubble {
+      margin: 4px 8px 4px 60px;
+      padding: 5px 10px;
+      background: transparent;
+      border: 1px dashed var(--border);
+      border-left: 3px dashed var(--violet);
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.4;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      opacity: 0.7;
+    }
+    .inline-archived-bubble .archived-round {
+      font-size: 9px;
+      background: var(--violet);
+      color: var(--bg);
+      border-radius: 3px;
+      padding: 1px 5px;
+      flex-shrink: 0;
+      font-weight: 600;
     }
     .suggestion-input {
       margin-top: 4px;
@@ -446,11 +725,13 @@
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-    /* Line click hint */
-    .d2h-code-linenumber { cursor: pointer; }
+    /* Line number click hint - only the number column is clickable */
+    .d2h-code-linenumber { cursor: pointer; user-select: none; }
     .d2h-code-linenumber:hover {
       background: rgba(38, 139, 210, 0.25) !important;
     }
+    /* Code content is freely selectable */
+    .d2h-code-line-ctn { cursor: text; user-select: text; }
 
     /* ---- diff2html Solarized Dark overrides ---- */
     .d2h-file-header, .d2h-file-wrapper {
@@ -475,51 +756,51 @@
     }
     /* Default text color for non-highlighted code */
     .d2h-code-line-ctn, .d2h-code-line-ctn * {
-      color: #93a1a1;
+      color: var(--text);
     }
-    /* Let highlight.js syntax colors take priority */
+    /* Syntax highlighting via CSS variables (theme-aware) */
     .d2h-code-line-ctn .hljs-keyword,
     .d2h-code-line-ctn .hljs-selector-tag,
-    .d2h-code-line-ctn .hljs-deletion { color: #859900 !important; }
+    .d2h-code-line-ctn .hljs-deletion { color: var(--hl-keyword) !important; }
     .d2h-code-line-ctn .hljs-string,
-    .d2h-code-line-ctn .hljs-addition { color: #2aa198 !important; }
+    .d2h-code-line-ctn .hljs-addition { color: var(--hl-string) !important; }
     .d2h-code-line-ctn .hljs-built_in,
-    .d2h-code-line-ctn .hljs-type { color: #b58900 !important; }
+    .d2h-code-line-ctn .hljs-type { color: var(--hl-type) !important; }
     .d2h-code-line-ctn .hljs-function,
-    .d2h-code-line-ctn .hljs-title { color: #268bd2 !important; }
+    .d2h-code-line-ctn .hljs-title { color: var(--hl-function) !important; }
     .d2h-code-line-ctn .hljs-number,
-    .d2h-code-line-ctn .hljs-literal { color: #d33682 !important; }
+    .d2h-code-line-ctn .hljs-literal { color: var(--hl-number) !important; }
     .d2h-code-line-ctn .hljs-comment,
-    .d2h-code-line-ctn .hljs-quote { color: #586e75 !important; font-style: italic; }
+    .d2h-code-line-ctn .hljs-quote { color: var(--hl-comment) !important; font-style: italic; }
     .d2h-code-line-ctn .hljs-attr,
-    .d2h-code-line-ctn .hljs-attribute { color: #b58900 !important; }
-    .d2h-code-line-ctn .hljs-params { color: #93a1a1 !important; }
+    .d2h-code-line-ctn .hljs-attribute { color: var(--hl-attr) !important; }
+    .d2h-code-line-ctn .hljs-params { color: var(--text) !important; }
     .d2h-code-line-ctn .hljs-meta,
-    .d2h-code-line-ctn .hljs-meta .hljs-keyword { color: #cb4b16 !important; }
+    .d2h-code-line-ctn .hljs-meta .hljs-keyword { color: var(--hl-meta) !important; }
     .d2h-code-line-ctn .hljs-class .hljs-title,
-    .d2h-code-line-ctn .hljs-title.class_ { color: #b58900 !important; }
+    .d2h-code-line-ctn .hljs-title.class_ { color: var(--hl-type) !important; }
     .d2h-code-line-ctn .hljs-variable,
-    .d2h-code-line-ctn .hljs-template-variable { color: #268bd2 !important; }
-    .d2h-code-line-ctn .hljs-regexp { color: #dc322f !important; }
-    .d2h-code-line-ctn .hljs-symbol { color: #6c71c4 !important; }
+    .d2h-code-line-ctn .hljs-template-variable { color: var(--hl-variable) !important; }
+    .d2h-code-line-ctn .hljs-regexp { color: var(--hl-regexp) !important; }
+    .d2h-code-line-ctn .hljs-symbol { color: var(--hl-symbol) !important; }
     .d2h-code-line-ctn .hljs-selector-class,
-    .d2h-code-line-ctn .hljs-selector-id { color: #268bd2 !important; }
+    .d2h-code-line-ctn .hljs-selector-id { color: var(--hl-function) !important; }
     /* Added lines */
     .d2h-ins, .d2h-ins .d2h-code-line-ctn {
-      background: #0a3d0a !important;
+      background: var(--diff-ins-bg) !important;
     }
     .d2h-ins .d2h-code-line-ctn ins,
     .d2h-ins.d2h-change .d2h-code-line-ctn ins {
-      background: #1a5c1a !important;
+      background: var(--diff-ins-highlight) !important;
       text-decoration: none !important;
     }
     /* Deleted lines */
     .d2h-del, .d2h-del .d2h-code-line-ctn {
-      background: #3d0a0a !important;
+      background: var(--diff-del-bg) !important;
     }
     .d2h-del .d2h-code-line-ctn del,
     .d2h-del.d2h-change .d2h-code-line-ctn del {
-      background: #5c1a1a !important;
+      background: var(--diff-del-highlight) !important;
       text-decoration: none !important;
     }
     /* Info/hunk headers - visually hidden but in DOM for fold indicator positioning */
@@ -533,17 +814,17 @@
     }
     /* Line numbers */
     .d2h-code-linenumber {
-      background: #073642 !important;
-      color: #657b83 !important;
-      border-color: #586e75 !important;
+      background: var(--bg-secondary) !important;
+      color: var(--text-muted) !important;
+      border-color: var(--border) !important;
     }
     .d2h-ins .d2h-code-linenumber {
-      background: #082e08 !important;
-      color: #839496 !important;
+      background: var(--diff-ins-linenumber) !important;
+      color: var(--text-muted) !important;
     }
     .d2h-del .d2h-code-linenumber {
-      background: #2e0808 !important;
-      color: #839496 !important;
+      background: var(--diff-del-linenumber) !important;
+      color: var(--text-muted) !important;
     }
     /* Empty placeholder cells */
     .d2h-code-side-emptyplaceholder, .d2h-emptyplaceholder {
@@ -616,7 +897,25 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: var(--yellow);
+      cursor: pointer;
+      z-index: 5;
+    }
+    .comment-marker.marker-current {
+      background: var(--orange);
+    }
+    .comment-marker.marker-archived {
+      background: transparent;
+      border: 2px solid var(--violet);
+    }
+    .comment-marker:hover { opacity: 0.8; }
+    /* Selected line range highlighting */
+    tr.line-selected td {
+      outline: 1px solid var(--accent);
+      outline-offset: -1px;
+    }
+    tr.line-selected .d2h-code-linenumber {
+      background: rgba(38, 139, 210, 0.25) !important;
+      color: var(--text-bright) !important;
     }
     .inline-comment-row td {
       padding: 0 !important;
@@ -633,7 +932,20 @@
       font-size: 12px;
       color: var(--text-bright);
       line-height: 1.4;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
     }
+    .inline-comment-bubble .inline-content { flex: 1; }
+    .inline-comment-delete {
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      padding: 0 2px;
+      flex-shrink: 0;
+    }
+    .inline-comment-delete:hover { color: var(--orange); }
     .inline-comment-bubble .inline-line-ref {
       color: var(--cyan);
       font-family: "SF Mono", "Fira Code", monospace;
@@ -656,21 +968,43 @@
 <body>
   <div class="toolbar">
     <div class="toolbar-title" id="toolbar-title">diffback</div>
-    <div class="toolbar-stats" id="toolbar-stats"></div>
-    <button class="btn btn-primary" id="btn-generate" title="Generate feedback prompt">Generate Feedback</button>
-    <button class="btn btn-danger" id="btn-finish" title="Finish review and clean up state">Finish Review</button>
+    <div class="toolbar-spacer"></div>
+    <div class="toolbar-actions">
+      <div class="toolbar-stats" id="toolbar-stats"></div>
+      <select id="theme-selector" class="btn" title="Change theme" style="padding:4px 8px;cursor:pointer;">
+        <option value="solarized-dark">Solarized Dark</option>
+        <option value="monokai">Monokai</option>
+        <option value="github-light">GitHub Light</option>
+      </select>
+      <button class="btn btn-primary" id="btn-generate" title="Generate feedback prompt">Generate</button>
+      <button class="btn btn-danger" id="btn-finish" title="Finish review and clean up state">Finish</button>
+    </div>
   </div>
 
   <div class="main">
-    <div class="sidebar">
-      <div class="sidebar-header">Files</div>
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-resize" id="sidebar-resize"></div>
+      <div class="sidebar-header">
+        <span>Files</span>
+        <div class="filter-bar" id="filter-bar">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="pending">Pending</button>
+          <button class="filter-btn" data-filter="viewed">Viewed</button>
+          <button class="filter-btn" data-filter="feedback">Feedback</button>
+        </div>
+      </div>
       <div class="file-list" id="file-list"></div>
       <div class="shortcuts-legend">
-        <div><span>Prev/Next file</span> <span><kbd>k</kbd> <kbd>j</kbd></span></div>
-        <div><span>Viewed file</span> <kbd>a</kbd></div>
-        <div><span>Add comment</span> <kbd>c</kbd></div>
-        <div><span>Generate feedback</span> <kbd>g</kbd></div>
-        <div><span>Send comment</span> <kbd>Cmd+Enter</kbd></div>
+        <div class="shortcuts-toggle" id="shortcuts-toggle">
+          <span>Shortcuts</span> <span id="shortcuts-arrow">&blacktriangleright;</span>
+        </div>
+        <div class="shortcuts-body" id="shortcuts-body" style="display:none;">
+          <div><span>Prev/Next file</span> <span><kbd>k</kbd> <kbd>j</kbd></span></div>
+          <div><span>Viewed file</span> <kbd>a</kbd></div>
+          <div><span>Add comment</span> <kbd>c</kbd></div>
+          <div><span>Generate feedback</span> <kbd>g</kbd></div>
+          <div><span>Send comment</span> <kbd>Cmd+Enter</kbd></div>
+        </div>
       </div>
     </div>
 
@@ -679,676 +1013,6 @@
     </div>
   </div>
 
-  <script>
-    // --- State ---
-    let appState = {
-      files: [],
-      generalComments: [],
-      summary: null,
-      projectName: '',
-      selectedFile: null,
-      currentDiff: null,
-      fileContents: {}, // cache for expanded fold content
-    };
-
-    // --- API ---
-    async function api(path, opts = {}) {
-      const res = await fetch(path, {
-        headers: { 'Content-Type': 'application/json' },
-        ...opts,
-        body: opts.body ? JSON.stringify(opts.body) : undefined,
-      });
-      return res.json();
-    }
-
-    async function loadFiles() {
-      const data = await api('/api/files');
-      appState.files = data.files;
-      appState.generalComments = data.generalComments || [];
-      appState.summary = data.summary;
-      appState.projectName = data.projectName;
-      renderToolbar();
-      renderFileList();
-    }
-
-    async function loadDiff(filePath) {
-      const data = await api(`/api/diff?path=${encodeURIComponent(filePath)}`);
-      appState.currentDiff = data;
-      appState.selectedFile = filePath;
-      renderContent();
-      document.querySelectorAll('.file-item').forEach(el => {
-        el.classList.toggle('active', el.dataset.path === filePath);
-      });
-    }
-
-    async function saveReview(filePath, status, comments) {
-      await api('/api/review', {
-        method: 'POST',
-        body: { path: filePath, status, comments },
-      });
-      await loadFiles();
-    }
-
-    async function saveGeneralComments() {
-      await api('/api/general-comments', {
-        method: 'POST',
-        body: { comments: appState.generalComments },
-      });
-    }
-
-    async function getFileContent(filePath) {
-      if (appState.fileContents[filePath]) return appState.fileContents[filePath];
-      const data = await api(`/api/file-content?path=${encodeURIComponent(filePath)}`);
-      if (data.content) {
-        appState.fileContents[filePath] = data.content;
-      }
-      return data.content || '';
-    }
-
-    // --- Navigation helpers ---
-    function navigateFile(direction) {
-      const files = appState.files;
-      if (files.length === 0) return;
-      const currentIdx = files.findIndex(f => f.path === appState.selectedFile);
-      let next;
-      if (direction === 'next') {
-        next = currentIdx < files.length - 1 ? currentIdx + 1 : 0;
-      } else {
-        next = currentIdx > 0 ? currentIdx - 1 : files.length - 1;
-      }
-      loadDiff(files[next].path);
-    }
-
-    // --- Render: Toolbar ---
-    function renderToolbar() {
-      document.getElementById('toolbar-title').textContent = `diffback: ${appState.projectName}`;
-      document.title = `Review: ${appState.projectName}`;
-      const s = appState.summary;
-      if (s) {
-        document.getElementById('toolbar-stats').innerHTML =
-          `<span class="count">${s.reviewed + s.hasFeedback}</span>/${s.total} reviewed`;
-      }
-    }
-
-    // --- Render: File List ---
-    function renderFileList() {
-      const container = document.getElementById('file-list');
-      container.innerHTML = '';
-
-      for (const file of appState.files) {
-        const el = document.createElement('div');
-        el.className = 'file-item' + (appState.selectedFile === file.path ? ' active' : '');
-        el.dataset.path = file.path;
-
-        const statusIcon = document.createElement('span');
-        statusIcon.className = 'file-status-icon';
-        if (file.status === 'added') { statusIcon.textContent = 'A'; statusIcon.style.color = 'var(--accent)'; }
-        else if (file.status === 'modified') { statusIcon.textContent = 'M'; statusIcon.style.color = 'var(--yellow)'; }
-        else if (file.status === 'deleted') { statusIcon.textContent = 'D'; statusIcon.style.color = 'var(--orange)'; }
-        else if (file.status === 'renamed') { statusIcon.textContent = 'R'; statusIcon.style.color = 'var(--violet)'; }
-
-        const reviewIcon = document.createElement('span');
-        reviewIcon.className = 'file-review-icon';
-        if (file.review?.status === 'reviewed') {
-          reviewIcon.textContent = '\u2713';
-          reviewIcon.style.color = 'var(--cyan)';
-        } else if (file.review?.status === 'has-feedback') {
-          reviewIcon.textContent = '\u25CF';
-          reviewIcon.style.color = 'var(--yellow)';
-        } else {
-          reviewIcon.textContent = '\u25CB';
-          reviewIcon.style.color = 'var(--text-muted)';
-        }
-
-        const pathEl = document.createElement('span');
-        pathEl.className = 'file-path';
-        const parts = file.path.split('/');
-        if (parts.length > 1) {
-          const dir = document.createElement('span');
-          dir.className = 'file-dir';
-          dir.textContent = parts.slice(0, -1).join('/') + '/';
-          pathEl.appendChild(dir);
-          pathEl.appendChild(document.createTextNode(parts[parts.length - 1]));
-        } else {
-          pathEl.textContent = file.path;
-        }
-
-        el.appendChild(statusIcon);
-        el.appendChild(reviewIcon);
-        el.appendChild(pathEl);
-        el.addEventListener('click', () => loadDiff(file.path));
-        container.appendChild(el);
-      }
-    }
-
-    // --- Parse hunk ranges from @@ header ---
-    function parseHunkHeader(headerText) {
-      // @@ -oldStart,oldCount +newStart,newCount @@
-      const match = headerText.match(/@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
-      if (!match) return null;
-      return {
-        oldStart: parseInt(match[1]),
-        oldCount: match[2] !== undefined ? parseInt(match[2]) : 1,
-        newStart: parseInt(match[3]),
-        newCount: match[4] !== undefined ? parseInt(match[4]) : 1,
-      };
-    }
-
-    // --- Insert fold indicators between hunks ---
-    function insertFoldIndicators(diffContainer, diffText, filePath) {
-      const hunkHeaders = [];
-      const lines = diffText.split('\n');
-      for (const line of lines) {
-        const parsed = parseHunkHeader(line);
-        if (parsed) hunkHeaders.push(parsed);
-      }
-
-      if (hunkHeaders.length === 0) return;
-
-      const infoElements = diffContainer.querySelectorAll('.d2h-info');
-
-      // For each pair of consecutive hunks, add a fold between them
-      for (let i = 1; i < hunkHeaders.length && i < infoElements.length; i++) {
-        const prevHunk = hunkHeaders[i - 1];
-        const currHunk = hunkHeaders[i];
-        const prevEnd = prevHunk.newStart + prevHunk.newCount - 1;
-        const currStart = currHunk.newStart;
-        const hiddenLines = currStart - prevEnd - 1;
-
-        if (hiddenLines <= 0) continue;
-
-        insertFoldAtElement(infoElements[i], filePath, prevEnd + 1, currStart - 1, hiddenLines, `fold-${i}`);
-      }
-    }
-
-    function insertFoldAtElement(infoEl, filePath, startLine, endLine, hiddenLines, foldId) {
-      const parentRow = infoEl.closest('tr');
-      if (!parentRow) return;
-
-      const fold = document.createElement('div');
-      fold.className = 'fold-indicator';
-      fold.innerHTML = `<span class="fold-icon">\u25B6</span> ${hiddenLines} lines hidden (${startLine}\u2013${endLine})`;
-
-      const foldContent = document.createElement('div');
-      foldContent.className = 'fold-lines collapsed';
-
-      const tr = document.createElement('tr');
-      const td = document.createElement('td');
-      td.colSpan = 99;
-      td.style.padding = '0';
-      td.style.border = 'none';
-      td.appendChild(fold);
-      td.appendChild(foldContent);
-      tr.appendChild(td);
-
-      parentRow.parentElement.insertBefore(tr, parentRow);
-
-      fold.addEventListener('click', async () => {
-        const isExpanded = !foldContent.classList.contains('collapsed');
-        if (isExpanded) {
-          foldContent.classList.add('collapsed');
-          fold.classList.remove('expanded');
-        } else {
-          if (!foldContent.dataset.loaded) {
-            const fileContent = await getFileContent(filePath);
-            const allLines = fileContent.split('\n');
-            const start = startLine - 1;
-            const end = endLine;
-            const slice = allLines.slice(start, end);
-
-            foldContent.innerHTML = slice.map((line, idx) => {
-              const lineNum = start + idx + 1;
-              return `<div class="fold-line"><span class="fold-line-num">${lineNum}</span><span class="fold-line-content">${escapeHtml(line)}</span></div>`;
-            }).join('');
-            foldContent.dataset.loaded = 'true';
-          }
-          foldContent.classList.remove('collapsed');
-          fold.classList.add('expanded');
-        }
-      });
-    }
-
-    // --- Insert inline comment markers & bubbles ---
-    function insertInlineComments(diffContainer, comments) {
-      const lineComments = comments.filter(c => c.line !== null);
-      if (lineComments.length === 0) return;
-
-      // Group comments by line number
-      const byLine = {};
-      for (const c of lineComments) {
-        if (!byLine[c.line]) byLine[c.line] = [];
-        byLine[c.line].push(c);
-      }
-
-      // Find all line number cells and match
-      diffContainer.querySelectorAll('.d2h-code-linenumber').forEach(el => {
-        const lineNum2 = el.querySelector('.line-num2')?.textContent?.trim();
-        const num = parseInt(lineNum2);
-        if (isNaN(num) || !byLine[num]) return;
-
-        // Add marker dot
-        el.style.position = 'relative';
-        const marker = document.createElement('span');
-        marker.className = 'comment-marker';
-        el.appendChild(marker);
-
-        // Insert comment bubble row after this line's <tr>
-        const tr = el.closest('tr');
-        if (!tr) return;
-
-        for (const comment of byLine[num]) {
-          const commentTr = document.createElement('tr');
-          commentTr.className = 'inline-comment-row';
-          const td = document.createElement('td');
-          td.colSpan = 99;
-          td.innerHTML = `
-            <div class="inline-comment-bubble">
-              <span class="inline-line-ref">L${comment.line}</span>
-              ${escapeHtml(comment.text)}
-              ${comment.suggestion ? `<div class="inline-suggestion">${escapeHtml(comment.suggestion)}</div>` : ''}
-            </div>
-          `;
-          commentTr.appendChild(td);
-          tr.after(commentTr);
-        }
-
-        // Remove from map so we don't double-insert
-        delete byLine[num];
-      });
-    }
-
-    // --- Render: Content (diff + review) ---
-    function renderContent() {
-      const container = document.getElementById('content');
-      const file = appState.files.find(f => f.path === appState.selectedFile);
-      if (!file || !appState.currentDiff) {
-        container.innerHTML = '<div class="empty-state">Select a file to review</div>';
-        return;
-      }
-
-      const review = file.review || { status: 'pending', comments: [], hash: '' };
-      const comments = review.comments || [];
-
-      container.innerHTML = '';
-
-      // File header with navigation arrows
-      const currentIdx = appState.files.findIndex(f => f.path === appState.selectedFile);
-      const header = document.createElement('div');
-      header.className = 'file-header';
-      header.innerHTML = `
-        <button class="file-nav-btn" id="btn-prev" title="Previous file (k)">\u25B2</button>
-        <button class="file-nav-btn" id="btn-next" title="Next file (j)">\u25BC</button>
-        <span class="file-header-path">${escapeHtml(file.path)}</span>
-        <span style="color: var(--text-muted); font-size: 12px;">${currentIdx + 1}/${appState.files.length}</span>
-        ${file.review?.changedSinceReview ? '<span class="badge badge-changed">Changed since review</span>' : ''}
-        <span class="badge badge-${file.status}">${file.status}</span>
-        <button class="btn ${review.status === 'reviewed' ? 'btn-primary' : ''}" id="btn-approve">
-          ${review.status === 'reviewed' ? '\u2713 Viewed' : 'Mark Viewed'}
-        </button>
-      `;
-      container.appendChild(header);
-
-      // Nav button handlers
-      header.querySelector('#btn-prev').addEventListener('click', () => navigateFile('prev'));
-      header.querySelector('#btn-next').addEventListener('click', () => navigateFile('next'));
-
-      // Diff viewer
-      const diffContainer = document.createElement('div');
-      diffContainer.className = 'diff-container';
-      if (appState.currentDiff.diff) {
-        try {
-          const diff2htmlUi = new Diff2HtmlUI(diffContainer, appState.currentDiff.diff, {
-            drawFileList: false,
-            matching: 'lines',
-            outputFormat: 'line-by-line',
-            highlight: true,
-            fileListToggle: false,
-            fileListStartVisible: false,
-            fileContentToggle: false,
-          });
-          diff2htmlUi.draw();
-
-          // Hide diff2html's own file header
-          const d2hHeader = diffContainer.querySelector('.d2h-file-header');
-          if (d2hHeader) d2hHeader.style.display = 'none';
-
-          // Post-render: folds, inline comments, line click handlers
-          setTimeout(() => {
-            insertFoldIndicators(diffContainer, appState.currentDiff.diff, file.path);
-            insertInlineComments(diffContainer, comments);
-
-            diffContainer.querySelectorAll('.d2h-code-linenumber').forEach(el => {
-              el.addEventListener('click', () => {
-                const lineNum = el.querySelector('.line-num2')?.textContent?.trim()
-                  || el.querySelector('.line-num1')?.textContent?.trim()
-                  || el.textContent?.trim();
-                const num = parseInt(lineNum);
-                if (!isNaN(num)) {
-                  const lineInput = document.getElementById('comment-line');
-                  if (lineInput) {
-                    lineInput.value = num;
-                    document.getElementById('comment-text')?.focus();
-                  }
-                }
-              });
-            });
-          }, 80);
-        } catch (err) {
-          diffContainer.innerHTML = `<pre style="padding: 16px; font-size: 13px; white-space: pre-wrap;">${escapeHtml(appState.currentDiff.diff)}</pre>`;
-        }
-      } else {
-        diffContainer.innerHTML = '<div class="empty-state">No diff available</div>';
-      }
-      container.appendChild(diffContainer);
-
-      // Review section
-      const reviewSection = document.createElement('div');
-      reviewSection.className = 'review-section';
-
-      const reviewHeader = document.createElement('div');
-      reviewHeader.className = 'review-header';
-      reviewHeader.textContent = `File Comments (${comments.length})`;
-      reviewSection.appendChild(reviewHeader);
-
-      if (comments.length > 0) {
-        const commentsList = document.createElement('div');
-        commentsList.className = 'comments-list';
-        for (const comment of comments) {
-          const item = document.createElement('div');
-          item.className = 'comment-item';
-          item.innerHTML = `
-            <span class="comment-line-ref">${comment.line ? 'L' + comment.line : 'General'}</span>
-            <div class="comment-text">
-              ${escapeHtml(comment.text)}
-              ${comment.suggestion ? `<div class="comment-suggestion">${escapeHtml(comment.suggestion)}</div>` : ''}
-            </div>
-            <span class="comment-delete" data-id="${comment.id}" title="Delete comment">&times;</span>
-          `;
-          commentsList.appendChild(item);
-        }
-        reviewSection.appendChild(commentsList);
-
-        commentsList.querySelectorAll('.comment-delete').forEach(el => {
-          el.addEventListener('click', () => {
-            const id = el.dataset.id;
-            const newComments = comments.filter(c => c.id !== id);
-            const newStatus = newComments.length > 0 ? 'has-feedback' : 'pending';
-            saveReview(file.path, newStatus, newComments).then(() => {
-              if (appState.selectedFile === file.path) loadDiff(file.path);
-            });
-          });
-        });
-      }
-
-      const addComment = document.createElement('div');
-      addComment.className = 'add-comment';
-      addComment.innerHTML = `
-        <div class="add-comment-row">
-          <input type="number" id="comment-line" placeholder="Line" min="1" title="Line number (leave empty for general file comment)">
-          <textarea id="comment-text" placeholder="Add a comment (line optional)..." rows="1"></textarea>
-          <button class="btn" id="btn-add-comment">Add</button>
-        </div>
-        <span class="suggestion-toggle" id="toggle-suggestion">+ Add code suggestion</span>
-        <div class="suggestion-input" id="suggestion-input" style="display: none;">
-          <textarea id="comment-suggestion" placeholder="Suggested code..." rows="3"></textarea>
-        </div>
-      `;
-      reviewSection.appendChild(addComment);
-      container.appendChild(reviewSection);
-
-      // General comments section
-      const generalSection = document.createElement('div');
-      generalSection.className = 'general-section';
-      generalSection.innerHTML = `
-        <div class="general-header" id="toggle-general">
-          General Comments (${appState.generalComments.length}) \u25BE
-        </div>
-        <div class="general-body" id="general-body">
-          <div class="comments-list" id="general-comments-list"></div>
-          <div class="add-comment">
-            <div class="add-comment-row">
-              <textarea id="general-comment-text" placeholder="Add a general comment (not tied to any file)..." rows="1" style="flex:1;"></textarea>
-              <button class="btn" id="btn-add-general">Add</button>
-            </div>
-          </div>
-        </div>
-      `;
-      container.appendChild(generalSection);
-
-      renderGeneralComments();
-
-      // --- Event handlers ---
-
-      document.getElementById('btn-approve').addEventListener('click', () => {
-        if (review.status === 'reviewed') {
-          // Un-view: stay on same file
-          saveReview(file.path, 'pending', comments).then(() => loadDiff(file.path));
-        } else {
-          // Viewed and advance to next file
-          saveReview(file.path, 'reviewed', comments).then(() => navigateFile('next'));
-        }
-      });
-
-      document.getElementById('btn-add-comment').addEventListener('click', addFileComment);
-      document.getElementById('comment-text').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addFileComment();
-      });
-
-      document.getElementById('toggle-suggestion').addEventListener('click', () => {
-        const input = document.getElementById('suggestion-input');
-        input.style.display = input.style.display === 'none' ? 'block' : 'none';
-      });
-
-      document.getElementById('btn-add-general').addEventListener('click', addGeneralComment);
-      document.getElementById('general-comment-text').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addGeneralComment();
-      });
-
-      document.getElementById('toggle-general').addEventListener('click', () => {
-        const body = document.getElementById('general-body');
-        body.style.display = body.style.display === 'none' ? 'block' : 'none';
-      });
-
-      function addFileComment() {
-        const text = document.getElementById('comment-text').value.trim();
-        if (!text) return;
-
-        const line = parseInt(document.getElementById('comment-line').value) || null;
-        const suggestion = document.getElementById('comment-suggestion')?.value.trim() || null;
-
-        const newComment = {
-          id: 'c-' + Date.now(),
-          line,
-          text,
-          suggestion,
-        };
-
-        // Save scroll position before re-render
-        const diffEl = document.querySelector('.diff-container');
-        const scrollTop = diffEl ? diffEl.scrollTop : 0;
-
-        const newComments = [...comments, newComment];
-        saveReview(file.path, 'has-feedback', newComments).then(() => {
-          loadDiff(file.path).then(() => {
-            // Restore scroll position
-            const newDiffEl = document.querySelector('.diff-container');
-            if (newDiffEl) newDiffEl.scrollTop = scrollTop;
-          });
-        });
-      }
-
-      function addGeneralComment() {
-        const text = document.getElementById('general-comment-text').value.trim();
-        if (!text) return;
-
-        appState.generalComments.push({
-          id: 'g-' + Date.now(),
-          text,
-        });
-        saveGeneralComments().then(() => {
-          document.getElementById('general-comment-text').value = '';
-          renderGeneralComments();
-          loadFiles();
-        });
-      }
-    }
-
-    function renderGeneralComments() {
-      const list = document.getElementById('general-comments-list');
-      if (!list) return;
-
-      list.innerHTML = '';
-      for (const comment of appState.generalComments) {
-        const item = document.createElement('div');
-        item.className = 'comment-item';
-        item.innerHTML = `
-          <span class="comment-text">${escapeHtml(comment.text)}</span>
-          <span class="comment-delete" data-id="${comment.id}" title="Delete">&times;</span>
-        `;
-        list.appendChild(item);
-      }
-
-      list.querySelectorAll('.comment-delete').forEach(el => {
-        el.addEventListener('click', () => {
-          appState.generalComments = appState.generalComments.filter(c => c.id !== el.dataset.id);
-          saveGeneralComments().then(() => {
-            renderGeneralComments();
-            loadFiles();
-          });
-        });
-      });
-
-      const header = document.getElementById('toggle-general');
-      if (header) {
-        header.textContent = `General Comments (${appState.generalComments.length}) \u25BE`;
-      }
-    }
-
-    // --- Generate Feedback ---
-    document.getElementById('btn-generate').addEventListener('click', async () => {
-      const data = await api('/api/generate', { method: 'POST', body: {} });
-      showFeedbackModal(data.prompt);
-    });
-
-    function showFeedbackModal(prompt) {
-      const overlay = document.createElement('div');
-      overlay.className = 'modal-overlay';
-      overlay.innerHTML = `
-        <div class="modal">
-          <div class="modal-header">
-            <span class="modal-title">Generated Feedback Prompt</span>
-            <button class="btn" id="modal-close">&times;</button>
-          </div>
-          <div class="modal-body">
-            <pre id="modal-prompt">${escapeHtml(prompt)}</pre>
-          </div>
-          <div class="modal-footer">
-            <span class="copied-msg" id="copied-msg" style="display: none;">Copied!</span>
-            <button class="btn btn-primary" id="modal-copy">Copy to Clipboard</button>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(overlay);
-
-      overlay.querySelector('#modal-close').addEventListener('click', () => overlay.remove());
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) overlay.remove();
-      });
-      document.addEventListener('keydown', function handler(e) {
-        if (e.key === 'Escape') {
-          overlay.remove();
-          document.removeEventListener('keydown', handler);
-        }
-      });
-
-      overlay.querySelector('#modal-copy').addEventListener('click', async () => {
-        await api('/api/clipboard', { method: 'POST', body: { text: prompt } });
-        const msg = overlay.querySelector('#copied-msg');
-        msg.style.display = 'inline';
-        setTimeout(() => msg.style.display = 'none', 2000);
-      });
-
-      // Auto-copy on open
-      api('/api/clipboard', { method: 'POST', body: { text: prompt } });
-    }
-
-    // --- Finish Review ---
-    document.getElementById('btn-finish').addEventListener('click', async () => {
-      if (!confirm('Finish review and clear all state? This cannot be undone.')) return;
-      await api('/api/reset', { method: 'POST', body: {} });
-
-      // Show goodbye screen with countdown
-      document.body.innerHTML = `
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#002b36;color:#93a1a1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;text-align:center;gap:16px;">
-          <div style="font-size:48px;">&#128640;</div>
-          <div style="font-size:22px;color:#eee8d5;font-weight:600;">Thanks for using diffback!</div>
-          <div style="font-size:14px;color:#657b83;">Review state cleared. Go ship that feedback.</div>
-          <div style="margin-top:24px;font-size:13px;color:#586e75;">Closing in <span id="countdown">5</span>s...</div>
-        </div>
-      `;
-
-      let seconds = 5;
-      const interval = setInterval(() => {
-        seconds--;
-        const el = document.getElementById('countdown');
-        if (el) el.textContent = String(seconds);
-        if (seconds <= 0) {
-          clearInterval(interval);
-          window.close();
-        }
-      }, 1000);
-    });
-
-    // --- Helpers ---
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
-    // --- Keyboard shortcuts ---
-    document.addEventListener('keydown', (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
-      if (e.key === 'j' || e.key === 'ArrowDown') {
-        e.preventDefault();
-        navigateFile('next');
-      } else if (e.key === 'k' || e.key === 'ArrowUp') {
-        e.preventDefault();
-        navigateFile('prev');
-      } else if (e.key === 'a') {
-        if (appState.selectedFile) {
-          document.getElementById('btn-approve')?.click();
-        }
-      } else if (e.key === 'c') {
-        e.preventDefault();
-        document.getElementById('comment-text')?.focus();
-      } else if (e.key === 'g') {
-        document.getElementById('btn-generate').click();
-      }
-    });
-
-    // --- Polling: refresh file list every 3s to detect external changes ---
-    setInterval(async () => {
-      const prev = JSON.stringify(appState.files.map(f => ({ p: f.path, s: f.review?.status, h: f.review?.hash, ch: f.review?.changedSinceReview })));
-      await loadFiles();
-      const curr = JSON.stringify(appState.files.map(f => ({ p: f.path, s: f.review?.status, h: f.review?.hash, ch: f.review?.changedSinceReview })));
-      // If the currently selected file changed, refresh its diff
-      if (prev !== curr && appState.selectedFile) {
-        const file = appState.files.find(f => f.path === appState.selectedFile);
-        if (file?.review?.changedSinceReview) {
-          // Preserve scroll
-          const diffEl = document.querySelector('.diff-container');
-          const scrollTop = diffEl ? diffEl.scrollTop : 0;
-          await loadDiff(appState.selectedFile);
-          const newDiffEl = document.querySelector('.diff-container');
-          if (newDiffEl) newDiffEl.scrollTop = scrollTop;
-        }
-      }
-    }, 3000);
-
-    // --- Init ---
-    loadFiles();
-  </script>
+  <script>__CLIENT_JS__</script>
 </body>
 </html>

@@ -4,6 +4,8 @@ A local web tool to review AI-generated code changes. Think GitHub PR reviews, b
 
 Instead of manually reading `git diff` output and typing feedback into a chat, `diffback` gives you a visual interface to browse changes, mark files as viewed, leave comments on specific lines, and generate a structured feedback prompt you can paste directly into your AI agent.
 
+![diffback diff view with syntax highlighting](docs/screenshot-diff-view.png)
+
 ## Why
 
 When working with AI coding agents (Claude Code, Cursor, Copilot, etc.), the review loop is painful:
@@ -18,15 +20,39 @@ When working with AI coding agents (Claude Code, Cursor, Copilot, etc.), the rev
 
 ## Features
 
-- **Web UI on localhost** -- file list + diff viewer + comment panel, opens in your browser
-- **Mark files as viewed** -- track your progress across many files
-- **Line comments** -- click a line number to reference it, add text or code suggestions
-- **General comments** -- feedback not tied to any file ("run the tests", "don't generate config files")
-- **Inline comment display** -- comments appear as bubbles directly under the referenced line
-- **Generate feedback prompt** -- one click to produce a structured markdown prompt, auto-copied to clipboard
+### File browser with diff stats
+
+Browse all changed files with status indicators (Added, Modified, Deleted, Renamed) and line stats (+/-). Filter by review status: All, Pending, Viewed, or Feedback.
+
+![File list with filters and stats](docs/screenshot-overview.png)
+
+### Inline comments with line ranges
+
+Click line numbers to reference them (shift+click for ranges). Comments appear as bubbles directly in the diff. Quick comment presets for common feedback.
+
+![Inline comment on a line range](docs/screenshot-inline-comment.png)
+
+### Generate feedback prompt
+
+One click to produce a structured, token-efficient markdown prompt. Auto-copied to clipboard, ready to paste into your AI agent.
+
+![Generated feedback modal](docs/screenshot-feedback.png)
+
+### Themes
+
+Three built-in themes: Solarized Dark (default), Monokai, and GitHub Light. Syntax highlighting adapts to each theme. Preference persists across sessions.
+
+| Solarized Dark | Monokai | GitHub Light |
+|:-:|:-:|:-:|
+| ![Solarized Dark](docs/screenshot-diff-view.png) | ![Monokai](docs/screenshot-monokai.png) | ![GitHub Light](docs/screenshot-github-light.png) |
+
+### More features
+
 - **Persistent state between rounds** -- files you viewed stay viewed if unchanged; modified files get flagged automatically
+- **Review round history** -- comments from previous rounds are archived and shown as violet markers in the diff
 - **Auto-refresh** -- detects external file changes every 3 seconds without manual reload
 - **Code fold/expand** -- hidden code between hunks shown as expandable sections
+- **Resizable sidebar** -- drag to adjust the file list width
 - **Keyboard shortcuts** -- `j/k` navigate files, `a` mark viewed, `c` comment, `g` generate feedback
 
 ## Requirements
@@ -82,9 +108,9 @@ Review state is stored in `.diffback-local-diffs/<branch_name>/state.json` insid
 Between review rounds:
 
 - **File unchanged** since last review -- stays marked as viewed
-- **File modified** since last review -- automatically flagged as "changed since review", status reset to pending
+- **File modified** since last review -- automatically flagged as "changed since review", status reset to pending. Previous comments are archived with their round number.
 - **File no longer in diff** (reverted or committed) -- removed from state
-- **"Finish Review"** button -- deletes all state for the current branch
+- **"Finish Review"** button -- deletes all state for the current branch, shows goodbye screen, shuts down the server
 
 ## Generated feedback format
 
@@ -97,7 +123,7 @@ The output is designed to be token-efficient and easy for AI agents to parse:
 
 ## src/users/model.py
 - L42: Handle the null case before accessing user.name
-- L58: Use a dataclass instead
+- L15-22: Use a dataclass instead
   ```
   @dataclass
   class UserProfile:
@@ -111,11 +137,11 @@ The output is designed to be token-efficient and easy for AI agents to parse:
 
 ## Tech stack
 
-- **TypeScript + Node.js** -- single `cli.ts` file for the server (~400 lines)
-- **Single HTML file** -- all CSS and JS inline, served from the server
+- **TypeScript + Node.js** -- server, feedback generator, and state manager as separate modules
+- **Vanilla JS client** -- HTML + CSS + JS, no frameworks
 - **Node built-in `http`** -- no Express or framework dependencies
-- **diff2html** -- diff rendering (loaded via CDN)
-- **Solarized Dark theme** -- designed for accessibility
+- **diff2html** -- diff rendering with syntax highlighting (loaded via CDN)
+- **3 themes** -- Solarized Dark, Monokai, GitHub Light
 
 ## Development
 
@@ -124,6 +150,7 @@ git clone https://github.com/verabravo/diffback.git
 cd diffback
 npm install
 npm run build
+npm test
 ```
 
 Test against any repo with uncommitted changes:

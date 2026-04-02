@@ -3,7 +3,9 @@ import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from "node:fs";
 import { resolve, basename, dirname } from "node:path";
-import type { ReviewState, ChangedFile, FileReview, GeneralComment } from "./types.js";
+import type { ReviewState, ChangedFile, FileReview, GeneralComment, ArchivedComment } from "./types.js";
+import { generateFeedback } from "./feedback.js";
+import { reconcileState } from "./state.js";
 
 declare const __CLIENT_HTML__: string;
 
@@ -108,6 +110,23 @@ function getChangedFiles(): ChangedFile[] {
     }
   }
 
+  // Get line stats (+/-)
+  if (hasCommits()) {
+    try {
+      const numstat = execSync("git diff --numstat HEAD", { cwd, encoding: "utf-8" }).trim();
+      if (numstat) {
+        for (const line of numstat.split("\n")) {
+          const [add, del, path] = line.split("\t");
+          const file = files.find((f) => f.path === path);
+          if (file && add !== "-") {
+            file.additions = parseInt(add!) || 0;
+            file.deletions = parseInt(del!) || 0;
+          }
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
   return files.sort((a, b) => a.path.localeCompare(b.path));
 }
 
@@ -187,9 +206,11 @@ function hashFile(filePath: string): string {
 function loadState(): ReviewState {
   try {
     const data = readFileSync(getStateFile(), "utf-8");
-    return JSON.parse(data);
+    const state = JSON.parse(data);
+    if (!state.round) state.round = 1;
+    return state;
   } catch {
-    return { files: {}, generalComments: [] };
+    return { round: 1, files: {}, generalComments: [] };
   }
 }
 
@@ -198,87 +219,9 @@ function saveState(state: ReviewState): void {
   writeFileSync(getStateFile(), JSON.stringify(state, null, 2));
 }
 
-function reconcileState(state: ReviewState, changedFiles: ChangedFile[]): ReviewState {
-  const currentPaths = new Set(changedFiles.map((f) => f.path));
+// reconcileState imported from ./state.js
 
-  // Remove files no longer in diff
-  for (const path of Object.keys(state.files)) {
-    if (!currentPaths.has(path)) {
-      delete state.files[path];
-    }
-  }
-
-  // Check hashes for existing files
-  for (const path of currentPaths) {
-    const currentHash = hashFile(path);
-    const existing = state.files[path];
-
-    if (existing) {
-      if (existing.hash !== currentHash) {
-        // File changed since last review
-        existing.status = "pending";
-        existing.hash = currentHash;
-        existing.changedSinceReview = true;
-      }
-    }
-    // New files get added when user first interacts with them
-  }
-
-  return state;
-}
-
-// --- Prompt generator ---
-
-function generateFeedback(state: ReviewState): string {
-  const lines: string[] = [];
-  const filesWithFeedback: string[] = [];
-
-  // Any file with comments has feedback, regardless of status
-  for (const [path, review] of Object.entries(state.files)) {
-    if (review.comments.length > 0) {
-      filesWithFeedback.push(path);
-    }
-  }
-
-  const totalComments =
-    filesWithFeedback.reduce((sum, p) => sum + state.files[p]!.comments.length, 0) +
-    state.generalComments.length;
-
-  lines.push("# Code Review Feedback");
-  lines.push("");
-  lines.push(
-    `${filesWithFeedback.length} files need changes. ${totalComments} comments total.`
-  );
-
-  // File-specific feedback
-  for (const path of filesWithFeedback) {
-    const review = state.files[path]!;
-    lines.push("");
-    lines.push(`## ${path}`);
-    for (const comment of review.comments) {
-      const lineRef = comment.line ? `L${comment.line}` : "General";
-      if (comment.suggestion) {
-        lines.push(`- ${lineRef}: ${comment.text}`);
-        lines.push("  ```");
-        lines.push(`  ${comment.suggestion}`);
-        lines.push("  ```");
-      } else {
-        lines.push(`- ${lineRef}: ${comment.text}`);
-      }
-    }
-  }
-
-  // General comments
-  if (state.generalComments.length > 0) {
-    lines.push("");
-    lines.push("## General");
-    for (const comment of state.generalComments) {
-      lines.push(`- ${comment.text}`);
-    }
-  }
-
-  return lines.join("\n");
-}
+// generateFeedback imported from ./feedback.js
 
 // --- Clipboard ---
 
@@ -325,7 +268,7 @@ function startServer(port: number) {
   }
 
   let state = loadState();
-  state = reconcileState(state, changedFiles);
+  state = reconcileState(state, changedFiles, hashFile);
   saveState(state);
 
   const server = http.createServer(async (req, res) => {
@@ -355,7 +298,7 @@ function startServer(port: number) {
       if (path === "/api/files" && req.method === "GET") {
         // Refresh file list and reconcile state
         const currentFiles = getChangedFiles();
-        state = reconcileState(state, currentFiles);
+        state = reconcileState(state, currentFiles, hashFile);
         saveState(state);
 
         const filesWithReview = currentFiles.map((f) => ({
@@ -375,6 +318,7 @@ function startServer(port: number) {
             pending: currentFiles.length - reviewed - hasFeedback,
           },
           projectName,
+          round: state.round,
         });
         return;
       }
@@ -424,10 +368,12 @@ function startServer(port: number) {
         const body = JSON.parse(await parseBody(req));
         const { path: filePath, status, comments } = body;
 
+        const existing = state.files[filePath];
         state.files[filePath] = {
           status,
           hash: hashFile(filePath),
           comments: comments || [],
+          archivedComments: existing?.archivedComments || [],
           changedSinceReview: false,
         };
         saveState(state);
