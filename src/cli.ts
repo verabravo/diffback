@@ -4,6 +4,8 @@ import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from "node:fs";
 import { resolve, basename, dirname } from "node:path";
 import type { ReviewState, ChangedFile, FileReview, GeneralComment, ArchivedComment } from "./types.js";
+import { generateFeedback } from "./feedback.js";
+import { reconcileState } from "./state.js";
 
 declare const __CLIENT_HTML__: string;
 
@@ -217,102 +219,9 @@ function saveState(state: ReviewState): void {
   writeFileSync(getStateFile(), JSON.stringify(state, null, 2));
 }
 
-function reconcileState(state: ReviewState, changedFiles: ChangedFile[]): ReviewState {
-  const currentPaths = new Set(changedFiles.map((f) => f.path));
-  let hasChanges = false;
+// reconcileState imported from ./state.js
 
-  // Remove files no longer in diff
-  for (const path of Object.keys(state.files)) {
-    if (!currentPaths.has(path)) {
-      delete state.files[path];
-    }
-  }
-
-  // Check hashes for existing files
-  for (const path of currentPaths) {
-    const currentHash = hashFile(path);
-    const existing = state.files[path];
-
-    if (existing) {
-      if (existing.hash !== currentHash) {
-        // File changed since last review - archive existing comments
-        if (existing.comments.length > 0) {
-          const archived: ArchivedComment[] = existing.comments.map((c) => ({
-            ...c,
-            archivedAt: new Date().toISOString(),
-            round: state.round,
-          }));
-          existing.archivedComments = [...(existing.archivedComments || []), ...archived];
-        }
-        existing.status = "pending";
-        existing.hash = currentHash;
-        existing.comments = [];
-        existing.changedSinceReview = true;
-        hasChanges = true;
-      }
-    }
-  }
-
-  // If any files changed, bump the round
-  if (hasChanges) {
-    state.round = (state.round || 1) + 1;
-  }
-
-  return state;
-}
-
-// --- Prompt generator ---
-
-function generateFeedback(state: ReviewState): string {
-  const lines: string[] = [];
-  const filesWithFeedback: string[] = [];
-
-  // Any file with comments has feedback, regardless of status
-  for (const [path, review] of Object.entries(state.files)) {
-    if (review.comments.length > 0) {
-      filesWithFeedback.push(path);
-    }
-  }
-
-  const totalComments =
-    filesWithFeedback.reduce((sum, p) => sum + state.files[p]!.comments.length, 0) +
-    state.generalComments.length;
-
-  lines.push("# Code Review Feedback");
-  lines.push("");
-  lines.push(
-    `${filesWithFeedback.length} files need changes. ${totalComments} comments total.`
-  );
-
-  // File-specific feedback
-  for (const path of filesWithFeedback) {
-    const review = state.files[path]!;
-    lines.push("");
-    lines.push(`## ${path}`);
-    for (const comment of review.comments) {
-      const lineRef = comment.line ? `L${comment.line}` : "General";
-      if (comment.suggestion) {
-        lines.push(`- ${lineRef}: ${comment.text}`);
-        lines.push("  ```");
-        lines.push(`  ${comment.suggestion}`);
-        lines.push("  ```");
-      } else {
-        lines.push(`- ${lineRef}: ${comment.text}`);
-      }
-    }
-  }
-
-  // General comments
-  if (state.generalComments.length > 0) {
-    lines.push("");
-    lines.push("## General");
-    for (const comment of state.generalComments) {
-      lines.push(`- ${comment.text}`);
-    }
-  }
-
-  return lines.join("\n");
-}
+// generateFeedback imported from ./feedback.js
 
 // --- Clipboard ---
 
@@ -359,7 +268,7 @@ function startServer(port: number) {
   }
 
   let state = loadState();
-  state = reconcileState(state, changedFiles);
+  state = reconcileState(state, changedFiles, hashFile);
   saveState(state);
 
   const server = http.createServer(async (req, res) => {
@@ -389,7 +298,7 @@ function startServer(port: number) {
       if (path === "/api/files" && req.method === "GET") {
         // Refresh file list and reconcile state
         const currentFiles = getChangedFiles();
-        state = reconcileState(state, currentFiles);
+        state = reconcileState(state, currentFiles, hashFile);
         saveState(state);
 
         const filesWithReview = currentFiles.map((f) => ({
