@@ -829,6 +829,15 @@
       border-radius: 50%;
       background: var(--yellow);
     }
+    /* Selected line range highlighting */
+    tr.line-selected td {
+      outline: 1px solid var(--accent);
+      outline-offset: -1px;
+    }
+    tr.line-selected .d2h-code-linenumber {
+      background: rgba(38, 139, 210, 0.25) !important;
+      color: var(--text-bright) !important;
+    }
     .inline-comment-row td {
       padding: 0 !important;
       border: none !important;
@@ -1331,19 +1340,64 @@
             insertFoldIndicators(diffContainer, appState.currentDiff.diff, file.path);
             insertInlineComments(diffContainer, comments);
 
-            diffContainer.querySelectorAll('.d2h-code-linenumber').forEach(el => {
-              el.addEventListener('click', () => {
-                const lineNum = el.querySelector('.line-num2')?.textContent?.trim()
-                  || el.querySelector('.line-num1')?.textContent?.trim()
-                  || el.textContent?.trim();
-                if (lineNum) {
-                  const lineInput = document.getElementById('comment-line');
-                  if (lineInput) {
-                    lineInput.value = lineNum;
-                    document.getElementById('comment-text')?.focus();
-                  }
+            // Line selection state
+            let rangeStart = null;
+
+            function highlightRange(s, e) {
+              diffContainer.querySelectorAll('tr.line-selected').forEach(r => r.classList.remove('line-selected'));
+              if (s === null) return;
+              diffContainer.querySelectorAll('.d2h-code-linenumber').forEach(numEl => {
+                const ln = parseInt(numEl.querySelector('.line-num2')?.textContent?.trim());
+                if (!isNaN(ln) && ln >= s && ln <= e) {
+                  const row = numEl.closest('tr');
+                  if (row) row.classList.add('line-selected');
                 }
               });
+            }
+
+            // Click line numbers: click to select, shift+click to extend range
+            diffContainer.querySelectorAll('.d2h-code-linenumber').forEach(el => {
+              el.addEventListener('click', (ev) => {
+                const lineNum = el.querySelector('.line-num2')?.textContent?.trim()
+                  || el.querySelector('.line-num1')?.textContent?.trim();
+                const num = parseInt(lineNum);
+                if (isNaN(num)) return;
+
+                const lineInput = document.getElementById('comment-line');
+                if (ev.shiftKey && rangeStart !== null) {
+                  const s = Math.min(rangeStart, num);
+                  const e = Math.max(rangeStart, num);
+                  if (lineInput) lineInput.value = s === e ? String(s) : `${s}-${e}`;
+                  highlightRange(s, e);
+                } else {
+                  rangeStart = num;
+                  if (lineInput) lineInput.value = String(num);
+                  highlightRange(num, num);
+                }
+                document.getElementById('comment-text')?.focus();
+              });
+            });
+
+            // Text selection: drag across code lines to select range
+            diffContainer.addEventListener('mouseup', (ev) => {
+              if (ev.target.closest('.d2h-code-linenumber')) return;
+              const sel = window.getSelection();
+              if (!sel || sel.isCollapsed) return;
+              const rng = sel.getRangeAt(0);
+              const startEl = rng.startContainer.parentElement?.closest('tr');
+              const endEl = rng.endContainer.parentElement?.closest('tr');
+              if (!startEl || !endEl) return;
+              const gln = (tr) => { const l = tr.querySelector('.line-num2')?.textContent?.trim(); return l ? parseInt(l) : null; };
+              const sl = gln(startEl), el2 = gln(endEl);
+              if (!sl) return;
+              const s = Math.min(sl, el2 || sl), e = Math.max(sl, el2 || sl);
+              const lineInput = document.getElementById('comment-line');
+              if (lineInput) {
+                lineInput.value = (s !== e) ? `${s}-${e}` : String(s);
+                highlightRange(s, e);
+                rangeStart = s;
+                document.getElementById('comment-text')?.focus();
+              }
             });
           }, 80);
         } catch (err) {
@@ -1417,17 +1471,11 @@
         btn.className = 'quick-btn';
         btn.textContent = preset;
         btn.addEventListener('click', () => {
-          const lineVal = document.getElementById('comment-line').value.trim() || null;
-          const newComment = { id: 'c-' + Date.now(), line: lineVal, text: preset, suggestion: null };
-          const newComments = [...comments, newComment];
-          const diffEl = document.querySelector('.diff-container');
-          const scrollTop = diffEl ? diffEl.scrollTop : 0;
-          saveReview(file.path, 'has-feedback', newComments).then(() => {
-            loadDiff(file.path).then(() => {
-              const newDiffEl = document.querySelector('.diff-container');
-              if (newDiffEl) newDiffEl.scrollTop = scrollTop;
-            });
-          });
+          const textArea = document.getElementById('comment-text');
+          if (textArea) {
+            textArea.value = preset;
+            textArea.focus();
+          }
         });
         quickComments.appendChild(btn);
       }
@@ -1521,33 +1569,6 @@
           toggleArchived.textContent = `Previous round comments (${archived.length}) ${isHidden ? '\u25BE' : '\u25B8'}`;
         });
       }
-
-      // Text selection on diff to auto-fill line range
-      diffContainer.addEventListener('mouseup', () => {
-        const sel = window.getSelection();
-        if (!sel || sel.isCollapsed) return;
-
-        // Find line numbers from the selection range
-        const range = sel.getRangeAt(0);
-        const startEl = range.startContainer.parentElement?.closest('tr');
-        const endEl = range.endContainer.parentElement?.closest('tr');
-        if (!startEl || !endEl) return;
-
-        const getLineNum = (tr) => {
-          const ln = tr.querySelector('.line-num2')?.textContent?.trim();
-          return ln ? parseInt(ln) : null;
-        };
-
-        const startLine = getLineNum(startEl);
-        const endLine = getLineNum(endEl);
-        if (!startLine) return;
-
-        const lineInput = document.getElementById('comment-line');
-        if (lineInput) {
-          lineInput.value = (endLine && endLine !== startLine) ? `${startLine}-${endLine}` : String(startLine);
-          document.getElementById('comment-text')?.focus();
-        }
-      });
 
       function addFileComment() {
         const text = document.getElementById('comment-text').value.trim();
