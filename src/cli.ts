@@ -1,7 +1,7 @@
 import http from "node:http";
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync } from "node:fs";
 import { resolve, basename, dirname } from "node:path";
 import type { ReviewState, ChangedFile, FileReview, GeneralComment, ArchivedComment } from "./types.js";
 import { generateFeedback } from "./feedback.js";

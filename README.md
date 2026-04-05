@@ -4,7 +4,7 @@ A local web tool to review AI-generated code changes. Think GitHub PR reviews, b
 
 Instead of manually reading `git diff` output and typing feedback into a chat, `diffback` gives you a visual interface to browse changes, mark files as viewed, leave comments on specific lines, and generate a structured feedback prompt you can paste directly into your AI agent.
 
-![diffback diff view with syntax highlighting](docs/screenshot-diff-view.png)
+![diffback diff view with syntax highlighting](https://raw.githubusercontent.com/verabravo/diffback/main/docs/screenshot-diff-view.png)
 
 ## Why
 
@@ -24,19 +24,19 @@ When working with AI coding agents (Claude Code, Cursor, Copilot, etc.), the rev
 
 Browse all changed files with status indicators (Added, Modified, Deleted, Renamed) and line stats (+/-). Filter by review status: All, Pending, Viewed, or Feedback.
 
-![File list with filters and stats](docs/screenshot-overview.png)
+![File list with filters and stats](https://raw.githubusercontent.com/verabravo/diffback/main/docs/screenshot-overview.png)
 
 ### Inline comments with line ranges
 
 Click line numbers to reference them (shift+click for ranges). Comments appear as bubbles directly in the diff. Quick comment presets for common feedback.
 
-![Inline comment on a line range](docs/screenshot-inline-comment.png)
+![Inline comment on a line range](https://raw.githubusercontent.com/verabravo/diffback/main/docs/screenshot-inline-comment.png)
 
 ### Generate feedback prompt
 
 One click to produce a structured, token-efficient markdown prompt. Auto-copied to clipboard, ready to paste into your AI agent.
 
-![Generated feedback modal](docs/screenshot-feedback.png)
+![Generated feedback modal](https://raw.githubusercontent.com/verabravo/diffback/main/docs/screenshot-feedback.png)
 
 ### Themes
 
@@ -44,7 +44,7 @@ Three built-in themes: Solarized Dark (default), Monokai, and GitHub Light. Synt
 
 | Solarized Dark | Monokai | GitHub Light |
 |:-:|:-:|:-:|
-| ![Solarized Dark](docs/screenshot-diff-view.png) | ![Monokai](docs/screenshot-monokai.png) | ![GitHub Light](docs/screenshot-github-light.png) |
+| ![Solarized Dark](https://raw.githubusercontent.com/verabravo/diffback/main/docs/screenshot-diff-view.png) | ![Monokai](https://raw.githubusercontent.com/verabravo/diffback/main/docs/screenshot-monokai.png) | ![GitHub Light](https://raw.githubusercontent.com/verabravo/diffback/main/docs/screenshot-github-light.png) |
 
 ### More features
 
