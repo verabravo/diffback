@@ -440,7 +440,12 @@ function startServer(port: number) {
     console.log("  Press Ctrl+C to stop\n");
 
     // Open browser
-    import("open").then((mod) => mod.default(`http://localhost:${port}`));
+    // Open browser without external dependency
+    const url = `http://localhost:${port}`;
+    const platform = process.platform;
+    if (platform === "darwin") execSync(`open "${url}"`);
+    else if (platform === "win32") execSync(`start "${url}"`);
+    else try { execSync(`xdg-open "${url}"`); } catch { /* ignore */ }
   });
 
   // Graceful shutdown

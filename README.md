@@ -119,7 +119,7 @@ The output is designed to be token-efficient and easy for AI agents to parse:
 ```markdown
 # Code Review Feedback
 
-2 files need changes. 3 comments total.
+1 files need changes. 2 comments total.
 
 ## src/users/model.py
 - L42: Handle the null case before accessing user.name
@@ -130,9 +130,6 @@ The output is designed to be token-efficient and easy for AI agents to parse:
       name: str
       email: str
   ```
-
-## General
-- Run the tests before finishing
 ```
 
 ## Tech stack
