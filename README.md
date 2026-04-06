@@ -116,7 +116,7 @@ Between review rounds:
 
 The output is designed to be token-efficient and easy for AI agents to parse:
 
-```markdown
+```
 # Code Review Feedback
 
 1 files need changes. 2 comments total.
@@ -124,12 +124,6 @@ The output is designed to be token-efficient and easy for AI agents to parse:
 ## src/users/model.py
 - L42: Handle the null case before accessing user.name
 - L15-22: Use a dataclass instead
-  ```
-  @dataclass
-  class UserProfile:
-      name: str
-      email: str
-  ```
 ```
 
 ## Tech stack

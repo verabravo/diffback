@@ -1,8 +1,8 @@
 import http from "node:http";
-import { execSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { execSync, execFileSync } from "node:child_process";
+import { createHash, randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync } from "node:fs";
-import { resolve, basename, dirname } from "node:path";
+import { resolve, basename, dirname, relative, isAbsolute } from "node:path";
 import type { ReviewState, ChangedFile, FileReview, GeneralComment, ArchivedComment } from "./types.js";
 import { generateFeedback } from "./feedback.js";
 import { reconcileState } from "./state.js";
@@ -14,7 +14,7 @@ const projectName = basename(cwd);
 
 function getBranchName(): string {
   try {
-    return execSync("git rev-parse --abbrev-ref HEAD", { cwd, encoding: "utf-8" }).trim();
+    return git("rev-parse", "--abbrev-ref", "HEAD").trim();
   } catch {
     return "unknown";
   }
@@ -29,11 +29,30 @@ function getStateFile(): string {
   return resolve(getStateDir(), "state.json");
 }
 
+// --- Security ---
+
+function validatePath(filePath: string): string {
+  // Prevent path traversal: resolve and ensure it's within cwd
+  const resolved = resolve(cwd, filePath);
+  const rel = relative(cwd, resolved);
+  if (rel.startsWith("..") || isAbsolute(rel)) {
+    throw new Error("Path traversal blocked");
+  }
+  return rel;
+}
+
+// Generate a token for the session to protect destructive endpoints
+const sessionToken = randomBytes(16).toString("hex");
+
+function git(...args: string[]): string {
+  return execFileSync("git", args, { cwd, encoding: "utf-8" });
+}
+
 // --- Git functions ---
 
 function isGitRepo(): boolean {
   try {
-    execSync("git rev-parse --is-inside-work-tree", { cwd, stdio: "pipe" });
+    execFileSync("git", ["rev-parse", "--is-inside-work-tree"], { cwd, stdio: "pipe" });
     return true;
   } catch {
     return false;
@@ -42,7 +61,7 @@ function isGitRepo(): boolean {
 
 function hasCommits(): boolean {
   try {
-    execSync("git rev-parse HEAD", { cwd, stdio: "pipe" });
+    execFileSync("git", ["rev-parse", "HEAD"], { cwd, stdio: "pipe" });
     return true;
   } catch {
     return false;
@@ -54,7 +73,7 @@ function getChangedFiles(): ChangedFile[] {
 
   if (hasCommits()) {
     // Tracked changes (modified, deleted, renamed)
-    const diff = execSync("git diff --name-status HEAD", { cwd, encoding: "utf-8" }).trim();
+    const diff = git("diff", "--name-status", "HEAD").trim();
     if (diff) {
       for (const line of diff.split("\n")) {
         const parts = line.split("\t");
@@ -73,10 +92,7 @@ function getChangedFiles(): ChangedFile[] {
   }
 
   // Untracked files
-  const untracked = execSync("git ls-files --others --exclude-standard", {
-    cwd,
-    encoding: "utf-8",
-  }).trim();
+  const untracked = git("ls-files", "--others", "--exclude-standard").trim();
   if (untracked) {
     for (const path of untracked.split("\n")) {
       // Skip diffback state files
@@ -89,7 +105,7 @@ function getChangedFiles(): ChangedFile[] {
 
   // Also check staged files
   if (hasCommits()) {
-    const staged = execSync("git diff --name-status --cached HEAD", { cwd, encoding: "utf-8" }).trim();
+    const staged = git("diff", "--name-status", "--cached", "HEAD").trim();
     if (staged) {
       for (const line of staged.split("\n")) {
         const parts = line.split("\t");
@@ -113,7 +129,7 @@ function getChangedFiles(): ChangedFile[] {
   // Get line stats (+/-)
   if (hasCommits()) {
     try {
-      const numstat = execSync("git diff --numstat HEAD", { cwd, encoding: "utf-8" }).trim();
+      const numstat = git("diff", "--numstat", "HEAD").trim();
       if (numstat) {
         for (const line of numstat.split("\n")) {
           const [add, del, path] = line.split("\t");
@@ -135,10 +151,7 @@ function getFileDiff(filePath: string): string {
 
   // Check if file is binary
   try {
-    const numstat = execSync(`git diff --numstat HEAD -- "${filePath}"`, {
-      cwd,
-      encoding: "utf-8",
-    }).trim();
+    const numstat = git("diff", "--numstat", "HEAD", "--", filePath).trim();
     if (numstat && numstat.startsWith("-\t-\t")) {
       return `Binary file ${filePath} has changed`;
     }
@@ -148,11 +161,11 @@ function getFileDiff(filePath: string): string {
 
   if (hasCommits()) {
     // Try tracked diff first
-    const diff = execSync(`git diff HEAD -- "${filePath}"`, { cwd, encoding: "utf-8" });
+    const diff = git("diff", "HEAD", "--", filePath);
     if (diff.trim()) return diff;
 
     // Try staged diff
-    const stagedDiff = execSync(`git diff --cached HEAD -- "${filePath}"`, { cwd, encoding: "utf-8" });
+    const stagedDiff = git("diff", "--cached", "HEAD", "--", filePath);
     if (stagedDiff.trim()) return stagedDiff;
   }
 
@@ -172,7 +185,7 @@ function getFileDiff(filePath: string): string {
   // Deleted file
   if (hasCommits()) {
     try {
-      const content = execSync(`git show HEAD:"${filePath}"`, { cwd, encoding: "utf-8" });
+      const content = git("show", `HEAD:${filePath}`);
       const lines = content.split("\n");
       const diffLines = [
         `--- a/${filePath}`,
@@ -229,11 +242,11 @@ function copyToClipboard(text: string): boolean {
   try {
     const platform = process.platform;
     if (platform === "darwin") {
-      execSync("pbcopy", { input: text });
+      execFileSync("pbcopy", [], { input: text });
     } else if (platform === "linux") {
-      execSync("xclip -selection clipboard", { input: text });
+      execFileSync("xclip", ["-selection", "clipboard"], { input: text });
     } else if (platform === "win32") {
-      execSync("clip", { input: text });
+      execFileSync("clip", [], { input: text });
     }
     return true;
   } catch {
@@ -319,6 +332,7 @@ function startServer(port: number) {
           },
           projectName,
           round: state.round,
+          sessionToken,
         });
         return;
       }
@@ -330,6 +344,7 @@ function startServer(port: number) {
           json(res, { error: "Missing path parameter" }, 400);
           return;
         }
+        try { validatePath(filePath); } catch { json(res, { error: "Invalid path" }, 400); return; }
         const diff = getFileDiff(filePath);
         const file = changedFiles.find((f) => f.path === filePath);
         json(res, {
@@ -347,6 +362,7 @@ function startServer(port: number) {
           json(res, { error: "Missing path parameter" }, 400);
           return;
         }
+        try { validatePath(filePath); } catch { json(res, { error: "Invalid path" }, 400); return; }
         const absPath = resolve(cwd, filePath);
         try {
           const content = readFileSync(absPath, "utf-8");
@@ -354,7 +370,7 @@ function startServer(port: number) {
         } catch {
           // Try from git for deleted files
           try {
-            const content = execSync(`git show HEAD:"${filePath}"`, { cwd, encoding: "utf-8" });
+            const content = git("show", `HEAD:${filePath}`);
             json(res, { path: filePath, content });
           } catch {
             json(res, { error: "File not found" }, 404);
@@ -367,6 +383,7 @@ function startServer(port: number) {
       if (path === "/api/review" && req.method === "POST") {
         const body = JSON.parse(await parseBody(req));
         const { path: filePath, status, comments } = body;
+        try { validatePath(filePath); } catch { json(res, { error: "Invalid path" }, 400); return; }
 
         const existing = state.files[filePath];
         state.files[filePath] = {
@@ -407,8 +424,13 @@ function startServer(port: number) {
         return;
       }
 
-      // API: Reset state (finish review) -- cleans up, responds, then shuts down
+      // API: Reset state (finish review) -- protected by session token
       if (path === "/api/reset" && req.method === "POST") {
+        const body = JSON.parse(await parseBody(req));
+        if (body.token !== sessionToken) {
+          json(res, { error: "Invalid session token" }, 403);
+          return;
+        }
         try {
           rmSync(getStateDir(), { recursive: true, force: true });
         } catch {
@@ -443,9 +465,9 @@ function startServer(port: number) {
     // Open browser without external dependency
     const url = `http://localhost:${port}`;
     const platform = process.platform;
-    if (platform === "darwin") execSync(`open "${url}"`);
-    else if (platform === "win32") execSync(`start "${url}"`);
-    else try { execSync(`xdg-open "${url}"`); } catch { /* ignore */ }
+    if (platform === "darwin") execFileSync("open", [url]);
+    else if (platform === "win32") execFileSync("cmd", ["/c", "start", url]);
+    else try { execFileSync("xdg-open", [url]); } catch { /* ignore */ }
   });
 
   // Graceful shutdown

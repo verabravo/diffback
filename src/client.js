@@ -9,6 +9,7 @@
       fileContents: {},
       filter: 'all',
       round: 1,
+      sessionToken: null,
     };
 
     // --- API ---
@@ -28,6 +29,7 @@
       appState.summary = data.summary;
       appState.projectName = data.projectName;
       appState.round = data.round || 1;
+      appState.sessionToken = data.sessionToken || null;
       renderToolbar();
       renderFileList();
     }
@@ -850,7 +852,7 @@
     // --- Finish Review ---
     document.getElementById('btn-finish').addEventListener('click', async () => {
       if (!confirm('Finish review and clear all state? This cannot be undone.')) return;
-      await api('/api/reset', { method: 'POST', body: {} });
+      await api('/api/reset', { method: 'POST', body: { token: appState.sessionToken } });
 
       // Show goodbye screen with countdown
       document.body.innerHTML = `
