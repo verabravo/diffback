@@ -196,7 +196,7 @@
     }
 
     // --- Insert fold indicators between hunks ---
-    function insertFoldIndicators(diffContainer, diffText, filePath) {
+    async function insertFoldIndicators(diffContainer, diffText, filePath) {
       const hunkHeaders = [];
       const lines = diffText.split('\n');
       for (const line of lines) {
@@ -206,9 +206,17 @@
 
       if (hunkHeaders.length === 0) return;
 
-      const infoElements = diffContainer.querySelectorAll('.d2h-info');
+      const infoElements = [...diffContainer.querySelectorAll('.d2h-info')]
+        .filter(el => /@@ -\d+/.test(el.textContent));
 
-      // For each pair of consecutive hunks, add a fold between them
+      // Gap before first hunk (lines 1 to firstHunk.newStart - 1)
+      const firstHunk = hunkHeaders[0];
+      if (firstHunk.newStart > 1 && infoElements.length > 0) {
+        const hiddenLines = firstHunk.newStart - 1;
+        insertFoldAtElement(infoElements[0], filePath, 1, hiddenLines, hiddenLines, 'fold-before');
+      }
+
+      // Gaps between consecutive hunks
       for (let i = 1; i < hunkHeaders.length && i < infoElements.length; i++) {
         const prevHunk = hunkHeaders[i - 1];
         const currHunk = hunkHeaders[i];
@@ -219,6 +227,24 @@
         if (hiddenLines <= 0) continue;
 
         insertFoldAtElement(infoElements[i], filePath, prevEnd + 1, currStart - 1, hiddenLines, `fold-${i}`);
+      }
+
+      // Gap after last hunk
+      const lastHunk = hunkHeaders[hunkHeaders.length - 1];
+      if (lastHunk.newCount > 0) {
+        const lastVisibleLine = lastHunk.newStart + lastHunk.newCount - 1;
+        const fileContent = await getFileContent(filePath);
+        if (fileContent) {
+          const contentLines = fileContent.split('\n');
+          // Don't count trailing empty line from split
+          const totalLines = contentLines.length > 0 && contentLines[contentLines.length - 1] === ''
+            ? contentLines.length - 1
+            : contentLines.length;
+          if (lastVisibleLine < totalLines) {
+            const hiddenLines = totalLines - lastVisibleLine;
+            insertFoldAfterTable(diffContainer, filePath, lastVisibleLine + 1, totalLines, hiddenLines);
+          }
+        }
       }
     }
 
@@ -259,7 +285,52 @@
 
             foldContent.innerHTML = slice.map((line, idx) => {
               const lineNum = start + idx + 1;
-              return `<div class="fold-line"><span class="fold-line-num">${lineNum}</span><span class="fold-line-content">${escapeHtml(line)}</span></div>`;
+              return `<div class="fold-line"><span class="fold-line-num">${lineNum}</span><span class="fold-line-num">${lineNum}</span><span class="fold-line-content">${escapeHtml(line)}</span></div>`;
+            }).join('');
+            foldContent.dataset.loaded = 'true';
+          }
+          foldContent.classList.remove('collapsed');
+          fold.classList.add('expanded');
+        }
+      });
+    }
+
+    function insertFoldAfterTable(diffContainer, filePath, startLine, endLine, hiddenLines) {
+      const tbody = diffContainer.querySelector('.d2h-diff-tbody');
+      if (!tbody) return;
+
+      const fold = document.createElement('div');
+      fold.className = 'fold-indicator';
+      fold.innerHTML = `<span class="fold-icon">\u25B6</span> ${hiddenLines} lines hidden (${startLine}\u2013${endLine})`;
+
+      const foldContent = document.createElement('div');
+      foldContent.className = 'fold-lines collapsed';
+
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 99;
+      td.style.padding = '0';
+      td.style.border = 'none';
+      td.appendChild(fold);
+      td.appendChild(foldContent);
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+
+      fold.addEventListener('click', async () => {
+        const isExpanded = !foldContent.classList.contains('collapsed');
+        if (isExpanded) {
+          foldContent.classList.add('collapsed');
+          fold.classList.remove('expanded');
+        } else {
+          if (!foldContent.dataset.loaded) {
+            const fileContent = await getFileContent(filePath);
+            const allLines = fileContent.split('\n');
+            const start = startLine - 1;
+            const end = endLine;
+            const slice = allLines.slice(start, end);
+            foldContent.innerHTML = slice.map((line, idx) => {
+              const lineNum = start + idx + 1;
+              return `<div class="fold-line"><span class="fold-line-num">${lineNum}</span><span class="fold-line-num">${lineNum}</span><span class="fold-line-content">${escapeHtml(line)}</span></div>`;
             }).join('');
             foldContent.dataset.loaded = 'true';
           }
@@ -281,7 +352,7 @@
       return parseInt(String(comment.line).split('-')[0]);
     }
 
-    function insertInlineComments(diffContainer, comments, archivedComments) {
+    function insertInlineComments(diffContainer, comments, archivedComments, onEdit) {
       // Build a map of line -> { current: [...], archived: [...] }
       const lineData = {};
 
@@ -360,9 +431,13 @@
                 ${escapeHtml(comment.text)}
                 ${comment.suggestion ? `<div class="inline-suggestion">${escapeHtml(comment.suggestion)}</div>` : ''}
               </div>
+              <span class="inline-comment-edit" data-id="${comment.id}" title="Edit comment">&#x270F;</span>
               <span class="inline-comment-delete" data-id="${comment.id}" title="Delete comment">&times;</span>
             </div>
           `;
+          if (onEdit) {
+            td.querySelector('.inline-comment-edit').addEventListener('click', () => onEdit(comment));
+          }
           td.querySelector('.inline-comment-delete').addEventListener('click', () => {
             const file = appState.files.find(f => f.path === appState.selectedFile);
             if (!file) return;
@@ -452,6 +527,29 @@
 
       container.innerHTML = '';
 
+      let editingCommentId = null;
+      function editComment(comment) {
+        editingCommentId = comment.id;
+        const lineInput = document.getElementById('comment-line');
+        const textInput = document.getElementById('comment-text');
+        const suggestionTextarea = document.getElementById('comment-suggestion');
+        const suggestionContainer = document.getElementById('suggestion-input');
+        const addBtn = document.getElementById('btn-add-comment');
+        const cancelBtn = document.getElementById('btn-cancel-edit');
+        if (lineInput) lineInput.value = comment.line || '';
+        if (textInput) { textInput.value = comment.text; textInput.focus(); }
+        if (comment.suggestion) {
+          if (suggestionContainer) suggestionContainer.style.display = 'block';
+          if (suggestionTextarea) suggestionTextarea.value = comment.suggestion;
+        } else {
+          if (suggestionContainer) suggestionContainer.style.display = 'none';
+          if (suggestionTextarea) suggestionTextarea.value = '';
+        }
+        if (addBtn) addBtn.textContent = 'Update';
+        if (cancelBtn) cancelBtn.style.display = '';
+        document.querySelector('.review-section')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
       // File header with navigation arrows
       const currentIdx = appState.files.findIndex(f => f.path === appState.selectedFile);
       const header = document.createElement('div');
@@ -459,7 +557,10 @@
       header.innerHTML = `
         <button class="file-nav-btn" id="btn-prev" title="Previous file (k)">\u25B2</button>
         <button class="file-nav-btn" id="btn-next" title="Next file (j)">\u25BC</button>
-        <span class="file-header-path">${escapeHtml(file.path)}</span>
+        <span style="display:flex;align-items:center;gap:4px;flex:1;min-width:0;overflow:hidden;">
+          <span class="file-header-path" style="flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(file.path)}</span>
+          <button class="file-nav-btn btn-copy-path" id="btn-copy-path" title="Copy file path" style="flex-shrink:0;">\u29C9</button>
+        </span>
         <span style="color: var(--text-muted); font-size: 12px;">${currentIdx + 1}/${appState.files.length}</span>
         ${file.review?.changedSinceReview ? '<span class="badge badge-changed">Changed since review</span>' : ''}
         <span class="badge badge-${file.status}">${file.status}</span>
@@ -472,6 +573,16 @@
       // Nav button handlers
       header.querySelector('#btn-prev').addEventListener('click', () => navigateFile('prev'));
       header.querySelector('#btn-next').addEventListener('click', () => navigateFile('next'));
+
+      // Copy path handler
+      header.querySelector('#btn-copy-path').addEventListener('click', async (e) => {
+        await api('/api/clipboard', { method: 'POST', body: { text: file.path } });
+        const btn = e.currentTarget;
+        const original = btn.textContent;
+        btn.textContent = '\u2713';
+        btn.style.color = 'var(--cyan)';
+        setTimeout(() => { btn.textContent = original; btn.style.color = ''; }, 1500);
+      });
 
       // Diff viewer
       const diffContainer = document.createElement('div');
@@ -496,13 +607,14 @@
           // Post-render: folds, inline comments, line click handlers
           setTimeout(() => {
             insertFoldIndicators(diffContainer, appState.currentDiff.diff, file.path);
-            insertInlineComments(diffContainer, comments, review.archivedComments || []);
+            insertInlineComments(diffContainer, comments, review.archivedComments || [], editComment);
 
             // Line selection state
             let rangeStart = null;
 
             function highlightRange(s, e) {
               diffContainer.querySelectorAll('tr.line-selected').forEach(r => r.classList.remove('line-selected'));
+              diffContainer.querySelectorAll('.fold-line.fold-line-selected').forEach(r => r.classList.remove('fold-line-selected'));
               if (s === null) return;
               diffContainer.querySelectorAll('.d2h-code-linenumber').forEach(numEl => {
                 const ln = parseInt(numEl.querySelector('.line-num2')?.textContent?.trim());
@@ -511,49 +623,142 @@
                   if (row) row.classList.add('line-selected');
                 }
               });
+              diffContainer.querySelectorAll('.fold-line').forEach(foldLine => {
+                const ln = parseInt(foldLine.querySelector('.fold-line-num')?.textContent?.trim());
+                if (!isNaN(ln) && ln >= s && ln <= e) foldLine.classList.add('fold-line-selected');
+              });
             }
 
-            // Click line numbers: click to select/deselect, shift+click to extend range
-            // Use mousedown+mouseup to ignore drags
+            // Click and drag line numbers to select range; shift+click to extend; click to toggle
+            let isDragging = false;
+            let dragStartLine = null;
+
+            document.addEventListener('mouseup', () => { isDragging = false; }, { capture: true });
+
             diffContainer.querySelectorAll('.d2h-code-linenumber').forEach(el => {
-              let mouseDownPos = null;
+              function getLineNum(el) {
+                const n = parseInt(el.querySelector('.line-num2')?.textContent?.trim() || el.querySelector('.line-num1')?.textContent?.trim());
+                return isNaN(n) ? null : n;
+              }
+
               el.addEventListener('mousedown', (ev) => {
-                mouseDownPos = { x: ev.clientX, y: ev.clientY };
-                ev.preventDefault(); // Prevent text selection starting from line numbers
-              });
-              el.addEventListener('mouseup', (ev) => {
-                // Ignore if dragged more than 5px (user was selecting text)
-                if (!mouseDownPos) return;
-                const dx = Math.abs(ev.clientX - mouseDownPos.x);
-                const dy = Math.abs(ev.clientY - mouseDownPos.y);
-                mouseDownPos = null;
-                if (dx > 5 || dy > 5) return;
-
-                const lineNum = el.querySelector('.line-num2')?.textContent?.trim()
-                  || el.querySelector('.line-num1')?.textContent?.trim();
-                const num = parseInt(lineNum);
-                if (isNaN(num)) return;
-
+                ev.preventDefault();
+                const num = getLineNum(el);
+                if (num === null) return;
+                isDragging = true;
+                dragStartLine = num;
+                // Start with single line selected
+                rangeStart = num;
                 const lineInput = document.getElementById('comment-line');
-                const currentVal = lineInput?.value.trim() || '';
+                if (lineInput) lineInput.value = String(num);
+                highlightRange(num, num);
+              });
+
+              el.addEventListener('mouseover', () => {
+                if (!isDragging || dragStartLine === null) return;
+                const num = getLineNum(el);
+                if (num === null) return;
+                const s = Math.min(dragStartLine, num);
+                const e = Math.max(dragStartLine, num);
+                const lineInput = document.getElementById('comment-line');
+                if (lineInput) lineInput.value = s === e ? String(s) : `${s}-${e}`;
+                highlightRange(s, e);
+              });
+
+              el.addEventListener('mouseup', (ev) => {
+                if (!isDragging) return;
+                isDragging = false;
+                const num = getLineNum(el);
+                if (num === null) { dragStartLine = null; return; }
 
                 if (ev.shiftKey && rangeStart !== null) {
+                  // Shift+click extends range from rangeStart
                   const s = Math.min(rangeStart, num);
                   const e = Math.max(rangeStart, num);
+                  const lineInput = document.getElementById('comment-line');
                   if (lineInput) lineInput.value = s === e ? String(s) : `${s}-${e}`;
                   highlightRange(s, e);
-                } else if (currentVal && (rangeStart === num || currentVal.includes('-'))) {
+                } else if (num === dragStartLine) {
+                  // Plain click on same line: toggle deselect if already selected
+                  const lineInput = document.getElementById('comment-line');
+                  const currentVal = lineInput?.value.trim() || '';
+                  if (currentVal && rangeStart === num && !currentVal.includes('-')) {
+                    rangeStart = null;
+                    if (lineInput) lineInput.value = '';
+                    highlightRange(null, null);
+                  } else {
+                    rangeStart = num;
+                    document.getElementById('comment-text')?.focus();
+                  }
+                } else {
+                  // Drag ended: range already set via mouseover, just focus textarea
+                  rangeStart = dragStartLine;
+                  document.getElementById('comment-text')?.focus();
+                }
+                dragStartLine = null;
+              });
+            });
+
+            // Event delegation for fold line numbers (dynamically inserted when fold is expanded)
+            function getFoldLineNum(target) {
+              const el = target.closest('.fold-line-num');
+              if (!el) return null;
+              const n = parseInt(el.textContent?.trim());
+              return isNaN(n) ? null : n;
+            }
+
+            diffContainer.addEventListener('mousedown', (ev) => {
+              const num = getFoldLineNum(ev.target);
+              if (num === null) return;
+              ev.preventDefault();
+              isDragging = true;
+              dragStartLine = num;
+              rangeStart = num;
+              const lineInput = document.getElementById('comment-line');
+              if (lineInput) lineInput.value = String(num);
+              highlightRange(num, num);
+            });
+
+            diffContainer.addEventListener('mouseover', (ev) => {
+              if (!isDragging || dragStartLine === null) return;
+              const num = getFoldLineNum(ev.target);
+              if (num === null) return;
+              const s = Math.min(dragStartLine, num);
+              const e = Math.max(dragStartLine, num);
+              const lineInput = document.getElementById('comment-line');
+              if (lineInput) lineInput.value = s === e ? String(s) : `${s}-${e}`;
+              highlightRange(s, e);
+            });
+
+            diffContainer.addEventListener('mouseup', (ev) => {
+              const num = getFoldLineNum(ev.target);
+              if (num === null) return;
+              if (!isDragging) return;
+              isDragging = false;
+              if (ev.shiftKey && rangeStart !== null) {
+                const s = Math.min(rangeStart, num);
+                const e = Math.max(rangeStart, num);
+                const lineInput = document.getElementById('comment-line');
+                if (lineInput) lineInput.value = s === e ? String(s) : `${s}-${e}`;
+                highlightRange(s, e);
+              } else if (num === dragStartLine) {
+                const lineInput = document.getElementById('comment-line');
+                const currentVal = lineInput?.value.trim() || '';
+                if (currentVal && rangeStart === num && !currentVal.includes('-')) {
                   rangeStart = null;
                   if (lineInput) lineInput.value = '';
                   highlightRange(null, null);
                 } else {
                   rangeStart = num;
-                  if (lineInput) lineInput.value = String(num);
-                  highlightRange(num, num);
                   document.getElementById('comment-text')?.focus();
                 }
-              });
+              } else {
+                rangeStart = dragStartLine;
+                document.getElementById('comment-text')?.focus();
+              }
+              dragStartLine = null;
             });
+
           }, 80);
         } catch (err) {
           diffContainer.innerHTML = `<pre style="padding: 16px; font-size: 13px; white-space: pre-wrap;">${escapeHtml(appState.currentDiff.diff)}</pre>`;
@@ -584,11 +789,19 @@
               ${escapeHtml(comment.text)}
               ${comment.suggestion ? `<div class="comment-suggestion">${escapeHtml(comment.suggestion)}</div>` : ''}
             </div>
+            <span class="comment-edit" data-id="${comment.id}" title="Edit comment">&#x270F;</span>
             <span class="comment-delete" data-id="${comment.id}" title="Delete comment">&times;</span>
           `;
           commentsList.appendChild(item);
         }
         reviewSection.appendChild(commentsList);
+
+        commentsList.querySelectorAll('.comment-edit').forEach(el => {
+          el.addEventListener('click', () => {
+            const comment = comments.find(c => c.id === el.dataset.id);
+            if (comment) editComment(comment);
+          });
+        });
 
         commentsList.querySelectorAll('.comment-delete').forEach(el => {
           el.addEventListener('click', () => {
@@ -609,6 +822,7 @@
           <input type="text" id="comment-line" placeholder="L# or L#-#" style="width:80px;padding:6px 8px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:12px;font-family:'SF Mono','Fira Code',monospace;" title="Line number or range (e.g. 42 or 15-22). Leave empty for general file comment.">
           <textarea id="comment-text" placeholder="Add a comment (line optional)..." rows="1"></textarea>
           <button class="btn" id="btn-add-comment">Add</button>
+          <span id="btn-cancel-edit" style="display:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:0 4px;" title="Cancel editing">cancel</span>
         </div>
         <span class="suggestion-toggle" id="toggle-suggestion">+ Add code suggestion</span>
         <div class="suggestion-input" id="suggestion-input" style="display: none;">
@@ -699,9 +913,26 @@
         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addFileComment();
       });
 
+      document.getElementById('btn-cancel-edit').addEventListener('click', () => {
+        editingCommentId = null;
+        document.getElementById('comment-line').value = '';
+        document.getElementById('comment-text').value = '';
+        const suggestionContainer = document.getElementById('suggestion-input');
+        const suggestionTextarea = document.getElementById('comment-suggestion');
+        if (suggestionContainer) suggestionContainer.style.display = 'none';
+        if (suggestionTextarea) suggestionTextarea.value = '';
+        document.getElementById('btn-add-comment').textContent = 'Add';
+        document.getElementById('btn-cancel-edit').style.display = 'none';
+      });
+
       document.getElementById('toggle-suggestion').addEventListener('click', () => {
         const input = document.getElementById('suggestion-input');
-        input.style.display = input.style.display === 'none' ? 'block' : 'none';
+        const isHiding = input.style.display !== 'none';
+        input.style.display = isHiding ? 'none' : 'block';
+        if (isHiding) {
+          const textarea = document.getElementById('comment-suggestion');
+          if (textarea) textarea.value = '';
+        }
       });
 
       document.getElementById('btn-add-general').addEventListener('click', addGeneralComment);
@@ -733,18 +964,23 @@
         const line = lineRaw || null; // Keep as string for ranges like "15-22"
         const suggestion = document.getElementById('comment-suggestion')?.value.trim() || null;
 
-        const newComment = {
-          id: 'c-' + Date.now(),
-          line,
-          text,
-          suggestion,
-        };
+        let newComments;
+        if (editingCommentId) {
+          // Update existing comment
+          newComments = comments.map(c =>
+            c.id === editingCommentId ? { ...c, line, text, suggestion } : c
+          );
+          editingCommentId = null;
+        } else {
+          // Add new comment
+          const newComment = { id: 'c-' + Date.now(), line, text, suggestion };
+          newComments = [...comments, newComment];
+        }
 
         // Save scroll position before re-render
         const diffEl = document.querySelector('.diff-container');
         const scrollTop = diffEl ? diffEl.scrollTop : 0;
 
-        const newComments = [...comments, newComment];
         saveReview(file.path, 'has-feedback', newComments).then(() => {
           loadDiff(file.path).then(() => {
             // Restore scroll position
@@ -852,6 +1088,7 @@
     // --- Finish Review ---
     document.getElementById('btn-finish').addEventListener('click', async () => {
       if (!confirm('Finish review and clear all state? This cannot be undone.')) return;
+      clearInterval(pollingInterval);
       await api('/api/reset', { method: 'POST', body: { token: appState.sessionToken } });
 
       // Show goodbye screen with countdown
@@ -907,7 +1144,7 @@
     });
 
     // --- Polling: refresh file list every 3s to detect external changes ---
-    setInterval(async () => {
+    const pollingInterval = setInterval(async () => {
       const prev = JSON.stringify(appState.files.map(f => ({ p: f.path, s: f.review?.status, h: f.review?.hash, ch: f.review?.changedSinceReview })));
       await loadFiles();
       const curr = JSON.stringify(appState.files.map(f => ({ p: f.path, s: f.review?.status, h: f.review?.hash, ch: f.review?.changedSinceReview })));

@@ -28,7 +28,7 @@ Browse all changed files with status indicators (Added, Modified, Deleted, Renam
 
 ### Inline comments with line ranges
 
-Click line numbers to reference them (shift+click for ranges). Comments appear as bubbles directly in the diff. Quick comment presets for common feedback.
+Click a line number to reference it, drag across multiple lines to select a range, or shift+click to extend. Comments appear as bubbles directly in the diff. Edit or delete comments with the ✏ / × icons — the edit button is available both in the diff bubble and in the file comments panel below. Quick comment presets for common feedback.
 
 ![Inline comment on a line range](https://raw.githubusercontent.com/verabravo/diffback/main/docs/screenshot-inline-comment.png)
 
@@ -51,7 +51,9 @@ Three built-in themes: Solarized Dark (default), Monokai, and GitHub Light. Synt
 - **Persistent state between rounds** -- files you viewed stay viewed if unchanged; modified files get flagged automatically
 - **Review round history** -- comments from previous rounds are archived and shown as violet markers in the diff
 - **Auto-refresh** -- detects external file changes every 3 seconds without manual reload
-- **Code fold/expand** -- hidden code between hunks shown as expandable sections
+- **Expand hidden lines** -- lines before the first hunk, between hunks, and after the last hunk are all expandable; expanded lines are also selectable for line-range comments
+- **Copy file path** -- ⧉ button next to the filename copies the full path to clipboard, so you can jump straight to the file in your IDE
+- **Code suggestions** -- attach a suggested replacement snippet to any comment; included verbatim in the generated feedback prompt
 - **Resizable sidebar** -- drag to adjust the file list width
 - **Keyboard shortcuts** -- `j/k` navigate files, `a` mark viewed, `c` comment, `g` generate feedback
 

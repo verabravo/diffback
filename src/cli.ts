@@ -273,6 +273,7 @@ function json(res: http.ServerResponse, data: unknown, status = 200) {
 }
 
 function startServer(port: number) {
+  let isShuttingDown = false;
   const changedFiles = getChangedFiles();
 
   if (changedFiles.length === 0) {
@@ -309,6 +310,7 @@ function startServer(port: number) {
 
       // API: List files
       if (path === "/api/files" && req.method === "GET") {
+        if (isShuttingDown) { json(res, { error: "shutting down" }, 503); return; }
         // Refresh file list and reconcile state
         const currentFiles = getChangedFiles();
         state = reconcileState(state, currentFiles, hashFile);
@@ -431,6 +433,7 @@ function startServer(port: number) {
           json(res, { error: "Invalid session token" }, 403);
           return;
         }
+        isShuttingDown = true;
         try {
           rmSync(getStateDir(), { recursive: true, force: true });
         } catch {

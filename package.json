@@ -1,6 +1,6 @@
 {
   "name": "diffback-review",
-  "version": "1.3.4",
+  "version": "1.4.0",
   "description": "Review AI-generated code changes and generate structured feedback prompts",
   "type": "module",
   "bin": {
