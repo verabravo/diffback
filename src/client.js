@@ -10,7 +10,28 @@
       filter: 'all',
       round: 1,
       sessionToken: null,
+      drafts: {},
     };
+
+    // Save the WIP comment (unsaved textarea state) for the current file so it survives
+    // a re-render or switching to another file and back.
+    function saveCurrentDraft() {
+      if (!appState.selectedFile) return;
+      const lineEl = document.getElementById('comment-line');
+      const textEl = document.getElementById('comment-text');
+      const suggestionEl = document.getElementById('comment-suggestion');
+      const suggestionContainer = document.getElementById('suggestion-input');
+      if (!textEl) return;
+      const text = textEl.value;
+      const line = lineEl ? lineEl.value : '';
+      const suggestion = suggestionEl ? suggestionEl.value : '';
+      const suggestionOpen = suggestionContainer ? suggestionContainer.style.display !== 'none' : false;
+      if (text.trim() || line.trim() || suggestion.trim()) {
+        appState.drafts[appState.selectedFile] = { line, text, suggestion, suggestionOpen };
+      } else {
+        delete appState.drafts[appState.selectedFile];
+      }
+    }
 
     // --- API ---
     async function api(path, opts = {}) {
@@ -35,6 +56,7 @@
     }
 
     async function loadDiff(filePath) {
+      saveCurrentDraft();
       const data = await api(`/api/diff?path=${encodeURIComponent(filePath)}`);
       appState.currentDiff = data;
       appState.selectedFile = filePath;
@@ -390,7 +412,12 @@
 
         if (!hasCurrent && !hasArchived && !isInRange) return;
 
-        el.style.position = 'relative';
+        // NOTE: do NOT set `el.style.position = 'relative'` here. The linenumber td
+        // is already `position: absolute` via diff2html CSS, which is itself a
+        // positioned context for absolute children, so the markers anchor correctly.
+        // Adding inline `position: relative` pulls the td into the table's flow and
+        // forces the browser to recompute column widths, which shifts all code
+        // content right.
 
         // Add marker dots (can have both current and archived on same line)
         if (hasCurrent) {
@@ -913,6 +940,19 @@
         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addFileComment();
       });
 
+      // Restore the WIP draft for this file if one was captured before a previous rebuild.
+      const draft = appState.drafts[file.path];
+      if (draft) {
+        const lineEl = document.getElementById('comment-line');
+        const textEl = document.getElementById('comment-text');
+        const suggestionEl = document.getElementById('comment-suggestion');
+        const suggestionContainer = document.getElementById('suggestion-input');
+        if (lineEl) lineEl.value = draft.line || '';
+        if (textEl) textEl.value = draft.text || '';
+        if (draft.suggestion && suggestionEl) suggestionEl.value = draft.suggestion;
+        if (draft.suggestionOpen && suggestionContainer) suggestionContainer.style.display = 'block';
+      }
+
       document.getElementById('btn-cancel-edit').addEventListener('click', () => {
         editingCommentId = null;
         document.getElementById('comment-line').value = '';
@@ -976,6 +1016,16 @@
           const newComment = { id: 'c-' + Date.now(), line, text, suggestion };
           newComments = [...comments, newComment];
         }
+
+        // Comment submitted: clear the form and the WIP draft so the next
+        // loadDiff doesn't re-capture them via saveCurrentDraft().
+        delete appState.drafts[file.path];
+        document.getElementById('comment-line').value = '';
+        document.getElementById('comment-text').value = '';
+        const sugEl = document.getElementById('comment-suggestion');
+        if (sugEl) sugEl.value = '';
+        const sugCont = document.getElementById('suggestion-input');
+        if (sugCont) sugCont.style.display = 'none';
 
         // Save scroll position before re-render
         const diffEl = document.querySelector('.diff-container');
