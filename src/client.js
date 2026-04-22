@@ -11,6 +11,7 @@
       round: 1,
       sessionToken: null,
       drafts: {},
+      compareRef: null,
     };
 
     // Save the WIP comment (unsaved textarea state) for the current file so it survives
@@ -51,6 +52,7 @@
       appState.projectName = data.projectName;
       appState.round = data.round || 1;
       appState.sessionToken = data.sessionToken || null;
+      appState.compareRef = data.compareRef || null;
       renderToolbar();
       renderFileList();
     }
@@ -117,8 +119,13 @@
 
     // --- Render: Toolbar ---
     function renderToolbar() {
-      document.getElementById('toolbar-title').textContent = `diffback: ${appState.projectName}`;
-      document.title = `Review: ${appState.projectName}`;
+      const label = appState.compareRef
+        ? `diffback: ${appState.projectName} vs ${appState.compareRef}`
+        : `diffback: ${appState.projectName}`;
+      document.getElementById('toolbar-title').textContent = label;
+      document.title = appState.compareRef
+        ? `Review: ${appState.projectName} vs ${appState.compareRef}`
+        : `Review: ${appState.projectName}`;
       const s = appState.summary;
       if (s) {
         document.getElementById('toolbar-stats').innerHTML =
@@ -1272,5 +1279,67 @@
     const savedTheme = localStorage.getItem('diffback-theme') || 'solarized-dark';
     setTheme(savedTheme);
 
+    // --- Branch compare selector ---
+    const compareSelector = document.getElementById('compare-selector');
+    let branchesLoaded = false;
+
+    compareSelector.addEventListener('focus', async () => {
+      if (branchesLoaded) return;
+      branchesLoaded = true;
+      // Snapshot current options count before fetch (just the default option)
+      const before = compareSelector.options.length;
+      const data = await api('/api/branches');
+      // The endpoint triggers git fetch in background; meanwhile render what we have
+      for (const branch of data.branches || []) {
+        const opt = document.createElement('option');
+        opt.value = branch;
+        opt.textContent = `vs ${branch}`;
+        compareSelector.appendChild(opt);
+      }
+      // Set current value if server started with --compare
+      if (data.compareRef) {
+        compareSelector.value = data.compareRef;
+      }
+      // After a short delay, re-fetch to pick up any new branches from git fetch
+      setTimeout(async () => {
+        const fresh = await api('/api/branches');
+        const existing = new Set(Array.from(compareSelector.options).map(o => o.value));
+        for (const branch of fresh.branches || []) {
+          if (!existing.has(branch)) {
+            const opt = document.createElement('option');
+            opt.value = branch;
+            opt.textContent = `vs ${branch}`;
+            compareSelector.appendChild(opt);
+          }
+        }
+      }, 3000);
+    });
+
+    compareSelector.addEventListener('change', async (e) => {
+      const ref = e.target.value || null;
+      await api('/api/compare', { method: 'POST', body: { ref } });
+      // Reset client state for the new comparison
+      appState.selectedFile = null;
+      appState.currentDiff = null;
+      appState.fileContents = {};
+      appState.drafts = {};
+      await loadFiles();
+      document.getElementById('content').innerHTML = '<div class="empty-state">Select a file to review</div>';
+    });
+
     // --- Init ---
-    loadFiles();
+    // If server started with --compare, sync the selector after first load
+    loadFiles().then(() => {
+      if (appState.compareRef) {
+        branchesLoaded = true;
+        api('/api/branches').then(data => {
+          for (const branch of data.branches || []) {
+            const opt = document.createElement('option');
+            opt.value = branch;
+            opt.textContent = `vs ${branch}`;
+            compareSelector.appendChild(opt);
+          }
+          compareSelector.value = appState.compareRef;
+        });
+      }
+    });

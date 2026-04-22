@@ -1,5 +1,5 @@
 import http from "node:http";
-import { execSync, execFileSync } from "node:child_process";
+import { execSync, execFileSync, execFile } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync } from "node:fs";
 import { resolve, basename, dirname, relative, isAbsolute } from "node:path";
@@ -20,13 +20,14 @@ function getBranchName(): string {
   }
 }
 
-function getStateDir(): string {
+function getStateDir(compareRef?: string): string {
   const branch = getBranchName();
-  return resolve(cwd, ".diffback-local-diffs", branch);
+  const suffix = compareRef ? `${branch}-vs-${compareRef.replace(/\//g, "_")}` : branch;
+  return resolve(cwd, ".diffback-local-diffs", suffix);
 }
 
-function getStateFile(): string {
-  return resolve(getStateDir(), "state.json");
+function getStateFile(compareRef?: string): string {
+  return resolve(getStateDir(compareRef), "state.json");
 }
 
 // --- Security ---
@@ -68,12 +69,24 @@ function hasCommits(): boolean {
   }
 }
 
-function getChangedFiles(): ChangedFile[] {
+function getChangedFiles(baseRef = "HEAD"): ChangedFile[] {
   const files: ChangedFile[] = [];
+  const isBranchCompare = baseRef !== "HEAD";
+
+  // For branch comparison, compute the merge-base so we only see changes
+  // on the current branch (not commits merged into the base since it diverged).
+  let effectiveRef = baseRef;
+  if (isBranchCompare && hasCommits()) {
+    try {
+      effectiveRef = git("merge-base", "HEAD", baseRef).trim();
+    } catch {
+      effectiveRef = baseRef;
+    }
+  }
 
   if (hasCommits()) {
     // Tracked changes (modified, deleted, renamed)
-    const diff = git("diff", "--name-status", "HEAD").trim();
+    const diff = git("diff", "--name-status", effectiveRef).trim();
     if (diff) {
       for (const line of diff.split("\n")) {
         const parts = line.split("\t");
@@ -91,21 +104,23 @@ function getChangedFiles(): ChangedFile[] {
     }
   }
 
-  // Untracked files
-  const untracked = git("ls-files", "--others", "--exclude-standard").trim();
-  if (untracked) {
-    for (const path of untracked.split("\n")) {
-      // Skip diffback state files
-      if (path.startsWith(".diffback-local-diffs/")) continue;
-      if (!files.some((f) => f.path === path)) {
-        files.push({ path, status: "added" });
+  // Untracked files (only in default HEAD mode — branch compare includes them via diff)
+  if (!isBranchCompare) {
+    const untracked = git("ls-files", "--others", "--exclude-standard").trim();
+    if (untracked) {
+      for (const path of untracked.split("\n")) {
+        // Skip diffback state files
+        if (path.startsWith(".diffback-local-diffs/")) continue;
+        if (!files.some((f) => f.path === path)) {
+          files.push({ path, status: "added" });
+        }
       }
     }
   }
 
   // Also check staged files
   if (hasCommits()) {
-    const staged = git("diff", "--name-status", "--cached", "HEAD").trim();
+    const staged = git("diff", "--name-status", "--cached", effectiveRef).trim();
     if (staged) {
       for (const line of staged.split("\n")) {
         const parts = line.split("\t");
@@ -129,7 +144,7 @@ function getChangedFiles(): ChangedFile[] {
   // Get line stats (+/-)
   if (hasCommits()) {
     try {
-      const numstat = git("diff", "--numstat", "HEAD").trim();
+      const numstat = git("diff", "--numstat", effectiveRef).trim();
       if (numstat) {
         for (const line of numstat.split("\n")) {
           const [add, del, path] = line.split("\t");
@@ -146,12 +161,22 @@ function getChangedFiles(): ChangedFile[] {
   return files.sort((a, b) => a.path.localeCompare(b.path));
 }
 
-function getFileDiff(filePath: string): string {
+function getFileDiff(filePath: string, baseRef = "HEAD"): string {
   const absPath = resolve(cwd, filePath);
+  const isBranchCompare = baseRef !== "HEAD";
+
+  let effectiveRef = baseRef;
+  if (isBranchCompare && hasCommits()) {
+    try {
+      effectiveRef = git("merge-base", "HEAD", baseRef).trim();
+    } catch {
+      effectiveRef = baseRef;
+    }
+  }
 
   // Check if file is binary
   try {
-    const numstat = git("diff", "--numstat", "HEAD", "--", filePath).trim();
+    const numstat = git("diff", "--numstat", effectiveRef, "--", filePath).trim();
     if (numstat && numstat.startsWith("-\t-\t")) {
       return `Binary file ${filePath} has changed`;
     }
@@ -161,16 +186,16 @@ function getFileDiff(filePath: string): string {
 
   if (hasCommits()) {
     // Try tracked diff first
-    const diff = git("diff", "HEAD", "--", filePath);
+    const diff = git("diff", effectiveRef, "--", filePath);
     if (diff.trim()) return diff;
 
     // Try staged diff
-    const stagedDiff = git("diff", "--cached", "HEAD", "--", filePath);
+    const stagedDiff = git("diff", "--cached", effectiveRef, "--", filePath);
     if (stagedDiff.trim()) return stagedDiff;
   }
 
-  // Untracked file: synthesize a diff
-  if (existsSync(absPath)) {
+  // Untracked file: synthesize a diff (only in HEAD mode)
+  if (!isBranchCompare && existsSync(absPath)) {
     const content = readFileSync(absPath, "utf-8");
     const lines = content.split("\n");
     const diffLines = [
@@ -185,7 +210,7 @@ function getFileDiff(filePath: string): string {
   // Deleted file
   if (hasCommits()) {
     try {
-      const content = git("show", `HEAD:${filePath}`);
+      const content = git("show", `${effectiveRef}:${filePath}`);
       const lines = content.split("\n");
       const diffLines = [
         `--- a/${filePath}`,
@@ -216,9 +241,9 @@ function hashFile(filePath: string): string {
 
 // --- State management ---
 
-function loadState(): ReviewState {
+function loadState(compareRef?: string): ReviewState {
   try {
-    const data = readFileSync(getStateFile(), "utf-8");
+    const data = readFileSync(getStateFile(compareRef), "utf-8");
     const state = JSON.parse(data);
     if (!state.round) state.round = 1;
     return state;
@@ -227,9 +252,9 @@ function loadState(): ReviewState {
   }
 }
 
-function saveState(state: ReviewState): void {
-  mkdirSync(getStateDir(), { recursive: true });
-  writeFileSync(getStateFile(), JSON.stringify(state, null, 2));
+function saveState(state: ReviewState, compareRef?: string): void {
+  mkdirSync(getStateDir(compareRef), { recursive: true });
+  writeFileSync(getStateFile(compareRef), JSON.stringify(state, null, 2));
 }
 
 // reconcileState imported from ./state.js
@@ -272,18 +297,59 @@ function json(res: http.ServerResponse, data: unknown, status = 200) {
   res.end(JSON.stringify(data));
 }
 
-function startServer(port: number) {
+function getCompareBranches(): string[] {
+  const current = getBranchName();
+  const branches: string[] = [];
+
+  // Local branches (except current)
+  try {
+    const local = git("branch", "--format=%(refname:short)").trim();
+    if (local) {
+      for (const b of local.split("\n")) {
+        if (b !== current) branches.push(b);
+      }
+    }
+  } catch { /* ignore */ }
+
+  // Remote branches
+  try {
+    const remote = git("branch", "-r", "--format=%(refname:short)").trim();
+    if (remote) {
+      for (const b of remote.split("\n")) {
+        if (!b.includes("HEAD") && !branches.includes(b)) branches.push(b);
+      }
+    }
+  } catch { /* ignore */ }
+
+  // Sort: main/master first (in any remote prefix), rest alphabetical
+  return branches.sort((a, b) => {
+    const aBase = a.replace(/^[^/]+\//, "");
+    const bBase = b.replace(/^[^/]+\//, "");
+    if (aBase === "main") return -1;
+    if (bBase === "main") return 1;
+    if (aBase === "master") return -1;
+    if (bBase === "master") return 1;
+    return a.localeCompare(b);
+  });
+}
+
+function startServer(port: number, initialCompareRef?: string) {
   let isShuttingDown = false;
-  const changedFiles = getChangedFiles();
+  let compareRef: string | undefined = initialCompareRef;
+  let changedFiles = getChangedFiles(compareRef);
 
   if (changedFiles.length === 0) {
-    console.log("No uncommitted changes found. Nothing to review.");
+    if (compareRef) {
+      console.log(`No changes found compared to ${compareRef}. Nothing to review.`);
+    } else {
+      console.log("No uncommitted changes found. Nothing to review.");
+    }
     process.exit(0);
   }
 
-  let state = loadState();
+  let state = loadState(compareRef);
   state = reconcileState(state, changedFiles, hashFile);
-  saveState(state);
+  saveState(state, compareRef);
 
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://localhost:${port}`);
@@ -312,9 +378,10 @@ function startServer(port: number) {
       if (path === "/api/files" && req.method === "GET") {
         if (isShuttingDown) { json(res, { error: "shutting down" }, 503); return; }
         // Refresh file list and reconcile state
-        const currentFiles = getChangedFiles();
+        const currentFiles = getChangedFiles(compareRef);
+        changedFiles = currentFiles;
         state = reconcileState(state, currentFiles, hashFile);
-        saveState(state);
+        saveState(state, compareRef);
 
         const filesWithReview = currentFiles.map((f) => ({
           ...f,
@@ -335,6 +402,7 @@ function startServer(port: number) {
           projectName,
           round: state.round,
           sessionToken,
+          compareRef: compareRef || null,
         });
         return;
       }
@@ -347,7 +415,7 @@ function startServer(port: number) {
           return;
         }
         try { validatePath(filePath); } catch { json(res, { error: "Invalid path" }, 400); return; }
-        const diff = getFileDiff(filePath);
+        const diff = getFileDiff(filePath, compareRef);
         const file = changedFiles.find((f) => f.path === filePath);
         json(res, {
           path: filePath,
@@ -395,7 +463,7 @@ function startServer(port: number) {
           archivedComments: existing?.archivedComments || [],
           changedSinceReview: false,
         };
-        saveState(state);
+        saveState(state, compareRef);
         json(res, { ok: true });
         return;
       }
@@ -404,7 +472,7 @@ function startServer(port: number) {
       if (path === "/api/general-comments" && req.method === "POST") {
         const body = JSON.parse(await parseBody(req));
         state.generalComments = body.comments as GeneralComment[];
-        saveState(state);
+        saveState(state, compareRef);
         json(res, { ok: true });
         return;
       }
@@ -426,6 +494,31 @@ function startServer(port: number) {
         return;
       }
 
+      // API: List remote branches (triggers background git fetch on first call)
+      if (path === "/api/branches" && req.method === "GET") {
+        // Return current branches immediately, then fetch in background
+        const branches = getCompareBranches();
+        json(res, { branches, compareRef: compareRef || null });
+        // Fetch in background (non-blocking) so next call sees new branches
+        execFile("git", ["fetch", "--quiet"], { cwd, timeout: 15000 }, () => {});
+        return;
+      }
+
+      // API: Switch comparison base ref
+      if (path === "/api/compare" && req.method === "POST") {
+        const body = JSON.parse(await parseBody(req));
+        const newRef: string | null = body.ref;
+        compareRef = newRef || undefined;
+
+        // Reload state for the new comparison
+        changedFiles = getChangedFiles(compareRef);
+        state = loadState(compareRef);
+        state = reconcileState(state, changedFiles, hashFile);
+        saveState(state, compareRef);
+        json(res, { ok: true, compareRef: compareRef || null, fileCount: changedFiles.length });
+        return;
+      }
+
       // API: Reset state (finish review) -- protected by session token
       if (path === "/api/reset" && req.method === "POST") {
         const body = JSON.parse(await parseBody(req));
@@ -435,7 +528,7 @@ function startServer(port: number) {
         }
         isShuttingDown = true;
         try {
-          rmSync(getStateDir(), { recursive: true, force: true });
+          rmSync(getStateDir(compareRef), { recursive: true, force: true });
         } catch {
           // Ignore
         }
@@ -460,6 +553,7 @@ function startServer(port: number) {
 
   server.listen(port, () => {
     console.log(`\n  diffback: ${projectName}`);
+    if (compareRef) console.log(`  comparing against: ${compareRef}`);
     console.log(`  ${changedFiles.length} files with changes`);
     console.log(`  http://localhost:${port}\n`);
     console.log("  Press Ctrl+C to stop\n");
@@ -495,10 +589,14 @@ function main() {
 
   const args = process.argv.slice(2);
   let port = 3847;
+  let compareRef: string | undefined;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--port" && args[i + 1]) {
       port = parseInt(args[i + 1]!, 10);
+      i++;
+    } else if ((args[i] === "--compare" || args[i] === "-c") && args[i + 1]) {
+      compareRef = args[i + 1]!;
       i++;
     } else if (args[i] === "--help" || args[i] === "-h") {
       console.log(`
@@ -507,14 +605,15 @@ function main() {
   Usage: diffback [options]
 
   Options:
-    --port <number>  Port to use (default: 3847)
-    --help, -h       Show this help
+    --port <number>       Port to use (default: 3847)
+    --compare, -c <ref>   Compare against a branch (e.g. origin/main)
+    --help, -h            Show this help
 `);
       process.exit(0);
     }
   }
 
-  startServer(port);
+  startServer(port, compareRef);
 }
 
 main();
